@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Duplicate orders",
+  "adapter": "process",
+  "observeMs": 500,
+  "events": [
+    { "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 },
+    { "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 },
+    { "order_id": "order-102", "quantity": 0, "unit_price_cents": 1500 }
+  ]
+}

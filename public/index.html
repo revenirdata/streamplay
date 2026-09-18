@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StreamPlay · Local workbench</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<body>
+<header><a class="brand" href="/" aria-label="StreamPlay home"><span class="mark">≋</span> StreamPlay<span class="by">by Revenir</span></a><div class="header-right"><span class="badge">OPEN SOURCE · IN DEVELOPMENT</span><a href="https://github.com/revenirdata/streamplay">GitHub ↗</a></div></header>
+<main>
+<div class="intro"><div><p class="eyebrow">LOCAL STREAMING WORKBENCH</p><h1>Edit. Run. Inspect. Repeat.</h1><p class="sub">Your events, your transformation, the actual output.</p></div><div class="local"><span></span> Local workspace</div></div>
+<div class="workspace">
+<section class="panel setup"><div class="panel-title"><h2>01 <span>Prepare events</span></h2><button id="reset" class="quiet">Load example</button></div>
+<label for="name">Scenario name</label><input id="name" maxlength="120">
+<div class="row"><div><label for="adapter">Execution</label><select id="adapter"><option value="process">Node.js example process</option><option value="kafka">Kafka → your application → Kafka</option></select></div><div class="window"><label for="window">Observe for (ms)</label><input id="window" type="number" min="100" max="60000" step="100"></div></div>
+<p id="connection" class="hint"></p>
+<label for="events">Input events <span>JSON array</span></label><textarea id="events" spellcheck="false" rows="15"></textarea>
+<details><summary>Expected output <span class="optional">optional</span></summary><p class="hint">Exact JSON records, ignoring record order and object key order. Duplicate counts matter. Checked over the full observation window.</p><label class="sr-only" for="expected">Expected output JSON array</label><textarea id="expected" spellcheck="false" rows="6" placeholder="Leave empty to explore first"></textarea></details>
+<div class="actions"><button id="run" class="primary">Run scenario <span>↗</span></button><button id="save">Save</button><button id="export">Export JSON</button></div>
+<p id="message" role="status" aria-live="polite"></p>
+</section>
+<section class="panel results"><div class="panel-title"><h2>02 <span>Inspect the run</span></h2><span id="status" class="status">Ready</span></div>
+<div class="metrics"><div><strong id="input-count">—</strong><span>sent</span></div><div><strong id="output-count">—</strong><span>observed</span></div><div><strong id="duration">—</strong><span>capture window</span></div></div>
+<p id="result-note" class="hint">Run the included example, then change its transformation in your editor and rerun. Inputs and outputs stay visible here.</p>
+<div class="tabs" role="tablist" aria-label="Run details"><button role="tab" aria-selected="true" data-tab="outputs">Output JSON</button><button role="tab" aria-selected="false" data-tab="inputs">Sent inputs</button><button role="tab" aria-selected="false" data-tab="logs">Logs</button><button role="tab" aria-selected="false" data-tab="metadata">Run metadata</button></div>
+<div id="record-list" class="records" role="tabpanel"><div class="empty"><span>↳</span><h3>Follow the data.</h3><p>Actual records appear here after execution.<br>No expected output required.</p></div></div>
+<div id="assertion"></div>
+</section>
+</div>
+<section class="panel history"><div class="panel-title"><h2>03 <span>Compare & repeat</span></h2><button id="refresh" class="quiet">Refresh history</button></div><div class="history-grid"><div><label for="history">Saved runs</label><select id="history"><option value="">No runs yet</option></select><p class="hint">Runs are saved locally, with the scenario used for that execution.</p><button id="load-run">Load run & scenario</button></div><div><label for="baseline">Compare selected run against</label><select id="baseline"><option value="">Choose a reference run</option></select><button id="compare">Compare outputs</button><p class="hint">Comparison preserves duplicates. A difference is an observation, not automatically a bug.</p></div><div><label for="saved">Saved scenarios</label><select id="saved"><option value="">No saved scenarios</option></select><button id="load-scenario">Load scenario</button><p class="hint">Export scenario JSON to version it with your application code.</p></div></div><pre id="comparison" hidden></pre></section>
+<footer><span>Created by <a href="https://github.com/kc-salazar">Carl Salazar</a> · Apache 2.0</span><span>Kafka/Flink integration in development · Kinesis & Kafka Streams next</span></footer>
+</main>
+</body></html>

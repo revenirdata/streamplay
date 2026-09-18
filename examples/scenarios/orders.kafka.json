@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "Flink order transformation",
+  "adapter": "kafka",
+  "observeMs": 5000,
+  "events": [
+    { "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 },
+    { "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 },
+    { "order_id": "order-102", "quantity": 0, "unit_price_cents": 1500 }
+  ],
+  "expected": [
+    { "order_id": "order-101", "total_cents": 6000 },
+    { "order_id": "order-101", "total_cents": 6000 }
+  ]
+}

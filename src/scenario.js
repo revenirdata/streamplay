@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: Apache-2.0
+export function validateScenario(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Scenario must be an object.');
+  if (value.version !== 1) throw new Error('Scenario version must be 1.');
+  if (typeof value.name !== 'string' || !value.name.trim() || value.name.length > 120) throw new Error('Name must be 1–120 characters.');
+  if (!['process', 'kafka'].includes(value.adapter)) throw new Error('Choose process or kafka.');
+  if (!Array.isArray(value.events) || value.events.length < 1 || value.events.length > 1000) throw new Error('Supply 1–1000 JSON events.');
+  if (JSON.stringify(value.events).length > 512_000) throw new Error('Events must fit within 512 KB.');
+  if (!Number.isInteger(value.observeMs) || value.observeMs < 100 || value.observeMs > 60_000) throw new Error('Observation window must be 100–60000 ms.');
+  if (value.expected !== undefined && (!Array.isArray(value.expected) || value.expected.length > 1000)) throw new Error('Expected output must be an array of up to 1000 records.');
+  // Copy only the public scenario contract. Connection settings and commands are never accepted from the browser.
+  return structuredClone({ version: 1, name: value.name.trim(), adapter: value.adapter, events: value.events,
+    observeMs: value.observeMs, ...(value.expected === undefined ? {} : { expected: value.expected }) });
+}
+
+export function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value !== null && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
+// Multiset comparison: object key order is irrelevant, duplicate counts are not.
+export function compare(expected, actual) {
+  const remaining = new Map();
+  for (const value of expected) {
+    const key = canonical(value);
+    const entry = remaining.get(key) ?? { value, count: 0 };
+    entry.count++;
+    remaining.set(key, entry);
+  }
+  const added = [];
+  for (const value of actual) {
+    const entry = remaining.get(canonical(value));
+    if (entry?.count) entry.count--;
+    else added.push(value);
+  }
+  const missing = [...remaining.values()].flatMap(({ value, count }) => Array.from({ length: count }, () => value));
+  return { equal: !added.length && !missing.length, added, missing };
+}
+
+export function record(raw, metadata = {}) {
+  let value;
+  let json = true;
+  try { value = JSON.parse(raw); } catch { value = raw; json = false; }
+  return { raw, value, json, observedAt: new Date().toISOString(), ...metadata };
+}

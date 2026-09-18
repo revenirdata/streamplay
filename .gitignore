@@ -1,0 +1,9 @@
+node_modules/
+.streamplay/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+playwright-report/
+test-results/

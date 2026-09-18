@@ -1,0 +1,32 @@
+{
+  "name": "@revenirdata/streamplay",
+  "version": "0.0.1-dev",
+  "private": true,
+  "description": "A local workbench for streaming development.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "Apache-2.0",
+  "author": "Carl Salazar (https://github.com/kc-salazar)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/revenirdata/streamplay.git"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.js",
+    "run:scenario": "node src/cli.js",
+    "example:up": "node scripts/example.js up",
+    "example:down": "node scripts/example.js down",
+    "test:integration": "node scripts/integration.js"
+  },
+  "dependencies": {
+    "kafkajs": "2.2.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
