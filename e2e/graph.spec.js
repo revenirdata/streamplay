@@ -20,7 +20,8 @@ test('named Kafka topics, raw process evidence, saved topology and accessible in
   await page.getByRole('button', { name: 'Fit', exact: true }).click();
   await expect(page.locator('#graph-zoom')).toHaveText(initialZoom);
   await page.locator('.pipeline').screenshot({ path: 'test-results/kafka-topics.png' });
-  await page.locator('#adapter').selectOption('process');
+  await page.getByRole('button', { name: 'Load example', exact: true }).click();
+  await expect(page.locator('.graph-node[data-kind="topic"]')).toHaveCount(0);
   await page.locator('#window').fill('1000');
   await page.getByRole('button', { name: 'Run scenario' }).click();
   await expect(page.locator('#status')).toHaveText('observed');

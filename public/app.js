@@ -161,11 +161,11 @@ $('export').onclick = safe(() => {
   const value = scenario(); const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([pretty(value) + '\n'], { type: 'application/json' }));
   link.href = url; link.download = 'scenario.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); message('Scenario exported.');
 });
-$('reset').onclick = () => { fill(config.sample); message('Example loaded.'); };
+$('reset').onclick = () => { fill(config.sample); graph.preview(config.sample.adapter); message('Example loaded.'); };
 $('adapter').onchange = () => { if ($('adapter').value === 'kafka' && Number($('window').value) < 5000) $('window').value = 5000; connection(); graph.preview($('adapter').value); };
 $('refresh').onclick = safe(refresh);
 $('load-run').onclick = () => { const run = runs.find(r => r.id === $('history').value); if (run) { showRun(run); fill(run.scenario); message('Loaded the saved run and its original scenario.'); } else message('Choose a saved run first.'); };
-$('load-scenario').onclick = () => { const saved = scenarios.find(s => s.id === $('saved').value); if (saved) { fill(saved.scenario); message('Saved scenario loaded.'); } else message('Choose a saved scenario first.'); };
+$('load-scenario').onclick = () => { const saved = scenarios.find(s => s.id === $('saved').value); if (saved) { fill(saved.scenario); graph.preview(saved.scenario.adapter); message('Saved scenario loaded.'); } else message('Choose a saved scenario first.'); };
 const canonical = value => Array.isArray(value) ? `[${value.map(canonical).join(',')}]` : value && typeof value === 'object' ? `{${Object.keys(value).sort().map(k => `${JSON.stringify(k)}:${canonical(value[k])}`).join(',')}}` : JSON.stringify(value);
 $('compare').onclick = () => {
   const selected = runs.find(r => r.id === $('history').value), reference = runs.find(r => r.id === $('baseline').value);
