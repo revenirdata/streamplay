@@ -13,6 +13,8 @@ Changing a streaming transformation often means juggling an editor, a producer, 
 
 Start by exploring. Add expected outputs once you understand the behavior.
 
+![StreamPlay capturing actual JSON output from its included Node.js process example](docs/images/workbench.png)
+
 ## Try the working development slice
 
 Requires **Node.js 22+**. No account or cloud service needed.
