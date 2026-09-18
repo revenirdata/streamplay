@@ -13,6 +13,7 @@ test('rejects ambiguous or unsafe graphs and accepts branches merging into a pro
   assert.throws(() => validateTopology({ ...graph, edges: [...graph.edges, { from: 'app', to: 'source' }] }), /acyclic/);
   assert.throws(() => validateTopology({ ...graph, edges: [{ from: 'missing', to: 'app' }] }), /endpoints/);
   assert.throws(() => validateTopology({ ...graph, nodes: [...graph.nodes, graph.nodes[0]] }), /unique/);
+  assert.throws(() => validateTopology({ ...graph, nodes: [{ kind: 'source', label: 'Missing ID' }] }), /unique/);
   assert.throws(() => validateTopology({ ...graph, edges: [...graph.edges, graph.edges[0]] }), /duplicated/);
   assert.throws(() => validateTopology({ ...graph, edges: [{ from: 'config', to: 'app', observe: 'inputs' }] }), /boundary/);
   graph.nodes[0].identityPath = '__proto__.secret';

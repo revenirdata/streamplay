@@ -9,7 +9,7 @@ export function validateTopology(value) {
   if (!Array.isArray(value.nodes) || !value.nodes.length || value.nodes.length > 32 || !Array.isArray(value.edges) || value.edges.length > 64) throw new Error('Topology supports 1–32 nodes and at most 64 edges.');
   const ids = new Set();
   const nodes = value.nodes.map(node => {
-    if (!node || !idPattern.test(node.id) || ids.has(node.id)) throw new Error('Topology nodes need unique alphanumeric IDs.');
+    if (!node || typeof node.id !== 'string' || !idPattern.test(node.id) || ids.has(node.id)) throw new Error('Topology nodes need unique alphanumeric IDs.');
     ids.add(node.id);
     if (!kinds.includes(node.kind) || typeof node.label !== 'string' || !node.label.trim() || node.label.length > 160) throw new Error('Topology nodes need a kind and a label of 1–160 characters.');
     if (!observations.includes(node.observe ?? 'none')) throw new Error('Node observation must be inputs, outputs or none.');
