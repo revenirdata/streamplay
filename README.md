@@ -69,6 +69,9 @@ Exit code `1` means a mismatch or execution error. A scenario without `expected`
 - Inspect live records, cancel a run while retaining partial evidence, and reconnect after refreshing the browser.
 - Pace events with explicit delays and compare selected JSON fields without changing raw evidence.
 - Attach a trusted [experimental local adapter](docs/LOCAL-ADAPTERS.md) to an existing application.
+- Navigate a dark [stream graph](docs/PIPELINE-GRAPH.md): named topics/streams, sources and processors, curved connections, raw-record inspection, and topology saved with each run.
+
+The [product vision](docs/VISION.md) explains the deeper work next: portable application setup, explicit state/readiness, evidence comparisons and shareable regression cases.
 
 Local data stays under `.streamplay/`, excluded from Git. No telemetry. Runs can include sensitive event data; use appropriate development fixtures.
 

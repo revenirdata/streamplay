@@ -7,9 +7,10 @@ import { createStore } from './store.js';
 import { runScenario } from './runner.js';
 import { validateScenario } from './scenario.js';
 import { loadLocalAdapter } from './adapters/local.js';
+import { validateTopology } from './topology.js';
 
 const publicDir = new URL('../public/', import.meta.url);
-const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/graph.js': ['graph.js', 'text/javascript'], '/topology.js': ['../src/topology.js', 'text/javascript'] };
 const sample = JSON.parse(await readFile(new URL('../examples/scenarios/orders.process.json', import.meta.url), 'utf8'));
 
 export function workbench(config = configuration(), adapters = {}) {
@@ -18,6 +19,7 @@ export function workbench(config = configuration(), adapters = {}) {
   let controller = null;
   let applicationAction = null;
   const application = config.application;
+  const topology = config.topology ? validateTopology(config.topology) : null;
   const server = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
@@ -33,7 +35,7 @@ export function workbench(config = configuration(), adapters = {}) {
         res.writeHead(200, { 'Content-Type': `${mime}; charset=utf-8` });
         return res.end(await readFile(new URL(file, publicDir)));
       }
-      if (req.method === 'GET' && url.pathname === '/api/config') return send(200, { sample: (typeof config.sample === 'function' ? config.sample() : config.sample) ?? sample, kafka: config.kafka, localAdapter: Boolean(adapters.local), application: application?.description ?? null, active: active ? { id: active.id, phase: active.phase } : null });
+      if (req.method === 'GET' && url.pathname === '/api/config') return send(200, { sample: (typeof config.sample === 'function' ? config.sample() : config.sample) ?? sample, kafka: config.kafka, topology, localAdapter: Boolean(adapters.local), application: application?.description ?? null, active: active ? { id: active.id, phase: active.phase } : null });
       if (req.method === 'GET' && url.pathname === '/api/application') return application ? send(200, { ...await application.snapshot(), busy: applicationAction, runningScenario: Boolean(active) }) : send(404, { error: 'No application configured.' });
       if (req.method === 'GET' && url.pathname === '/api/active') return send(200, active);
       if (req.method === 'GET' && url.pathname === '/api/runs') return send(200, await store.list('runs'));
@@ -70,7 +72,7 @@ export function workbench(config = configuration(), adapters = {}) {
       active = { phase: 'connecting' };
       controller = new AbortController();
       try {
-        const run = await runScenario(scenario, { store, kafka: config.kafka, adapters, signal: controller.signal, onUpdate: update => { active = update; } });
+        const run = await runScenario(scenario, { store, kafka: config.kafka, topology, adapters, signal: controller.signal, onUpdate: update => { active = update; } });
         return send(201, run);
       } finally { active = null; controller = null; }
     } catch (error) { send(400, { error: error.message }); }
@@ -80,6 +82,7 @@ export function workbench(config = configuration(), adapters = {}) {
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
   const config = configuration();
+  if (config.topologyFile) config.topology = validateTopology(JSON.parse(await readFile(config.topologyFile, 'utf8')));
   const server = workbench(config, await loadLocalAdapter(config.adapterModule));
   server.listen(config.port, '127.0.0.1', () => console.log(`StreamPlay → http://127.0.0.1:${server.address().port}\nLocal artifacts: ${config.dataDir}`));
   server.on('error', error => { console.error(error.message); process.exitCode = 1; });
