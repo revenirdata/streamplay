@@ -12,6 +12,8 @@ The repository is public so contributors can participate while the product devel
 
 ## Before the first release
 
+Current priority: an [interactive stream graph](PIPELINE-GRAPH.md), then the four capabilities in [the product vision](VISION.md): portable application projects, verified execution conditions, evidence differences/timeline, and portable CI regression cases. The graph does not imply automatic discovery or internal event tracing.
+
 - [ ] Kafka Streams example using an actual JVM application; inspect startup, errors, and explicit state reset.
 - [ ] Kinesis transport: shard discovery, starting positions, partial write retries, throttling, and isolated real-AWS verification.
 - [ ] Independent input/output bindings, beginning with a local Kinesis → Flink → SQS pilot. Preserve raw events and queue acknowledgment semantics; an application does not have to emit to the same transport it consumes.

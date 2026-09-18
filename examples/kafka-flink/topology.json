@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "adapter": "kafka",
+  "nodes": [
+    { "id": "source", "kind": "source", "label": "Order fixtures", "observe": "inputs" },
+    { "id": "input", "kind": "topic", "label": "streamplay-orders-in", "observe": "inputs", "detail": "Kafka producer acknowledgments at the configured input topic." },
+    { "id": "flink", "kind": "processor", "label": "Apache Flink · orders", "observe": "none", "detail": "The bundled Flink SQL job. Internal operator state and per-record processing are not captured by the Kafka adapter." },
+    { "id": "output", "kind": "topic", "label": "streamplay-orders-out", "observe": "outputs", "detail": "Kafka records captured from the run's starting offsets." }
+  ],
+  "edges": [
+    { "from": "source", "to": "input", "observe": "inputs" },
+    { "from": "input", "to": "flink", "observe": "none" },
+    { "from": "flink", "to": "output", "observe": "outputs" }
+  ]
+}

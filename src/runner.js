@@ -4,8 +4,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { assertOutputs, validateScenario } from './scenario.js';
 import { processAdapter } from './adapters/process.js';
 import { kafkaAdapter } from './adapters/kafka.js';
+import { topologyFor } from './topology.js';
 
-export async function runScenario(input, { store, kafka, adapters = {}, onUpdate = () => {}, signal } = {}) {
+export async function runScenario(input, { store, kafka, adapters = {}, onUpdate = () => {}, signal, topology } = {}) {
   const scenario = validateScenario(input);
   const run = { id: randomUUID(), startedAt: new Date().toISOString(), scenario, status: 'running', inputs: [], outputs: [], logs: [],
     observation: { complete: false, meaning: 'Records observed during a bounded interval, not proof that a stream is complete.' } };
@@ -31,6 +32,7 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
     scenario
   };
   try {
+    run.topology = topologyFor(scenario.adapter, topology, kafka);
     update();
     checkAbort();
     const factory = adapters[scenario.adapter] ?? (scenario.adapter === 'process' ? processAdapter : scenario.adapter === 'kafka' ? c => kafkaAdapter(c, kafka) : undefined);
