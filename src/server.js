@@ -16,6 +16,8 @@ export function workbench(config = configuration(), adapters = {}) {
   const store = createStore(config.dataDir);
   let active = null;
   let controller = null;
+  let applicationAction = null;
+  const application = config.application;
   const server = createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
@@ -31,11 +33,12 @@ export function workbench(config = configuration(), adapters = {}) {
         res.writeHead(200, { 'Content-Type': `${mime}; charset=utf-8` });
         return res.end(await readFile(new URL(file, publicDir)));
       }
-      if (req.method === 'GET' && url.pathname === '/api/config') return send(200, { sample: config.sample ?? sample, kafka: config.kafka, localAdapter: Boolean(adapters.local), active: active ? { id: active.id, phase: active.phase } : null });
+      if (req.method === 'GET' && url.pathname === '/api/config') return send(200, { sample: (typeof config.sample === 'function' ? config.sample() : config.sample) ?? sample, kafka: config.kafka, localAdapter: Boolean(adapters.local), application: application?.description ?? null, active: active ? { id: active.id, phase: active.phase } : null });
+      if (req.method === 'GET' && url.pathname === '/api/application') return application ? send(200, { ...await application.snapshot(), busy: applicationAction, runningScenario: Boolean(active) }) : send(404, { error: 'No application configured.' });
       if (req.method === 'GET' && url.pathname === '/api/active') return send(200, active);
       if (req.method === 'GET' && url.pathname === '/api/runs') return send(200, await store.list('runs'));
       if (req.method === 'GET' && url.pathname === '/api/scenarios') return send(200, await store.list('scenarios'));
-      if (req.method !== 'POST' || !['/api/runs', '/api/scenarios', '/api/cancel'].includes(url.pathname)) return send(404, { error: 'Not found.' });
+      if (req.method !== 'POST' || !['/api/runs', '/api/scenarios', '/api/cancel', '/api/application'].includes(url.pathname)) return send(404, { error: 'Not found.' });
       if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: 'Send application/json.' });
       if (url.pathname === '/api/cancel') {
         if (!controller) return send(409, { error: 'No active run.' });
@@ -49,12 +52,21 @@ export function workbench(config = configuration(), adapters = {}) {
         if (bytes > 1_000_000) return send(413, { error: 'Request exceeds 1 MB.' });
         chunks.push(chunk);
       }
-      const scenario = validateScenario(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+      if (url.pathname === '/api/application') {
+        if (!application) return send(404, { error: 'No application configured.' });
+        if (active || applicationAction) return send(409, { error: 'Wait for the current run or application action to finish.' });
+        if (!application.description.actions.some(action => action.id === body?.action)) return send(400, { error: 'Unknown application action.' });
+        applicationAction = body.action;
+        try { return send(200, await application.act(body.action, body.value)); }
+        finally { applicationAction = null; }
+      }
+      const scenario = validateScenario(body);
       if (url.pathname === '/api/scenarios') {
         const id = await store.save('scenarios', { scenario, savedAt: new Date().toISOString() });
         return send(201, { id });
       }
-      if (active) return send(409, { error: 'A run is already active. Wait for it to finish.' });
+      if (active || applicationAction) return send(409, { error: 'A run or application action is already active. Wait for it to finish.' });
       active = { phase: 'connecting' };
       controller = new AbortController();
       try {

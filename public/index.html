@@ -5,6 +5,18 @@
 <header><a class="brand" href="/" aria-label="StreamPlay home"><span class="mark">≋</span> StreamPlay<span class="by">by Revenir</span></a><div class="header-right"><span class="badge">OPEN SOURCE · IN DEVELOPMENT</span><a href="https://github.com/revenirdata/streamplay">GitHub ↗</a></div></header>
 <main>
 <div class="intro"><div><p class="eyebrow">LOCAL STREAMING WORKBENCH</p><h1>Edit. Run. Inspect. Repeat.</h1><p class="sub">Your events, your transformation, the actual output.</p></div><div class="local"><span></span> Local workspace</div></div>
+<section id="application" class="panel application" hidden>
+<div class="panel-title"><h2>Application <span id="application-name"></span></h2><span id="application-status" class="status">Connecting</span></div>
+<p id="application-detail" class="hint"></p>
+<div id="application-actions" class="actions"></div>
+<p id="application-message" role="status" aria-live="polite"></p>
+<div class="application-grid">
+<div><label for="application-config">Application configuration <span>JSON</span></label><textarea id="application-config" rows="7" spellcheck="false"></textarea><p class="hint">Edit, then apply using the application control above. Changes affect the local application. Clearing the view does not reset its state.</p></div>
+<div><label for="application-input">Action input <span>JSON</span></label><textarea id="application-input" rows="7" spellcheck="false"></textarea><p class="hint">Used by application controls that accept input. Scenario runs use the event editor below.</p></div>
+</div>
+<div class="tabs" role="tablist" aria-label="Application details"><button role="tab" aria-selected="true" data-application-tab="outputs">Live outputs</button><button role="tab" aria-selected="false" data-application-tab="inputs">Live inputs</button><button role="tab" aria-selected="false" data-application-tab="logs">Application logs</button><button role="tab" aria-selected="false" data-application-tab="state">Application state</button></div>
+<pre id="application-records" class="application-records" role="tabpanel"></pre>
+</section>
 <div class="workspace">
 <section class="panel setup"><div class="panel-title"><h2>01 <span>Prepare events</span></h2><button id="reset" class="quiet">Load example</button></div>
 <label for="name">Scenario name</label><input id="name" maxlength="120">
@@ -17,7 +29,7 @@
 <p id="message" role="status" aria-live="polite"></p>
 </section>
 <section class="panel results"><div class="panel-title"><h2>02 <span>Inspect the run</span></h2><span id="status" class="status">Ready</span></div>
-<div class="metrics"><div><strong id="input-count">—</strong><span>sent</span></div><div><strong id="output-count">—</strong><span>observed</span></div><div><strong id="duration">—</strong><span>capture window</span></div></div>
+<div class="metrics"><div><strong id="input-count">—</strong><span>sent</span></div><div><strong id="output-count">—</strong><span>observed</span></div><div><strong id="duration">—</strong><span>observe after final input</span></div></div>
 <p id="result-note" class="hint">Run the included example, then change its transformation in your editor and rerun. Inputs and outputs stay visible here.</p>
 <div class="tabs" role="tablist" aria-label="Run details"><button role="tab" aria-selected="true" data-tab="outputs">Output JSON</button><button role="tab" aria-selected="false" data-tab="inputs">Sent inputs</button><button role="tab" aria-selected="false" data-tab="logs">Logs</button><button role="tab" aria-selected="false" data-tab="metadata">Run metadata</button></div>
 <div id="record-list" class="records" role="tabpanel"><div class="empty"><span>↳</span><h3>Follow the data.</h3><p>Actual records appear here after execution.<br>No expected output required.</p></div></div>
