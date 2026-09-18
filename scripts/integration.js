@@ -19,3 +19,11 @@ for (let i = 0; i < 2; i++) {
   assert.ok(run.outputs.every(record => record.transport === 'kafka' && record.offset !== undefined));
 }
 console.log('Verified two Kafka → Flink → Kafka runs, including duplicate counts and output offset boundaries.');
+
+// A legitimate filtered input can produce no output; a deliberately wrong expectation must fail.
+const filtered = await runScenario({ ...scenario, name: 'Filtered zero-quantity input', events: [{ order_id: 'filtered', quantity: 0, unit_price_cents: 1000 }], expected: [] }, { kafka: config.kafka, store: createStore(config.dataDir) });
+assert.equal(filtered.status, 'passed', filtered.error);
+const mismatch = await runScenario({ ...scenario, name: 'Detect an unexpected real output', events: [{ order_id: 'extra', quantity: 1, unit_price_cents: 1000 }], expected: [] }, { kafka: config.kafka, store: createStore(config.dataDir) });
+assert.equal(mismatch.status, 'failed');
+assert.equal(mismatch.assertion.added.length, 1);
+console.log('Verified filtered output and a deliberately failing expectation against real Flink.');

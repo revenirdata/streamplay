@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile, link, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
@@ -13,7 +13,12 @@ export function createStore(root) {
       const id = value.id ?? randomUUID();
       const file = path(kind, id);
       await mkdir(join(root, kind), { recursive: true });
-      await writeFile(file, JSON.stringify({ ...value, id }, null, 2) + '\n', { flag: 'wx' });
+      const temporary = file + `.${randomUUID()}.tmp`;
+      try {
+        await writeFile(temporary, JSON.stringify({ ...value, id }, null, 2) + '\n', { flag: 'wx' });
+        // Publish an already complete file without overwriting an existing immutable artifact.
+        await link(temporary, file);
+      } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
       return id;
     },
     async get(kind, id) { return JSON.parse(await readFile(path(kind, id), 'utf8')); },

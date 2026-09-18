@@ -11,16 +11,19 @@ async function api(path, value) {
 function message(text) { $('message').textContent = text; }
 function scenario() {
   const expected = $('expected').value.trim();
-  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}) };
+  const schedule = $('schedule').value.trim(), fields = $('fields').value.trim();
+  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}) };
 }
 function connection() {
   $('connection').textContent = $('adapter').value === 'process'
     ? 'Runs examples/process/transform.js in a fresh Node.js process. Edit that file and rerun. This example does not run Flink.'
+    : $('adapter').value === 'local' ? 'Uses the trusted adapter selected when this workbench was started. Input/output transports and application state are recorded in run metadata.'
     : `${config.kafka.brokers.join(', ')} · ${config.kafka.inputTopic} → ${config.kafka.outputTopic}. Start your application first. Dedicated sandbox topics only; application state is retained.`;
 }
 function fill(value) {
   $('name').value = value.name; $('adapter').value = value.adapter; $('window').value = value.observeMs;
   $('events').value = pretty(value.events); $('expected').value = value.expected === undefined ? '' : pretty(value.expected); connection();
+  $('schedule').value = value.scheduleMs ? pretty(value.scheduleMs) : ''; $('fields').value = value.matchFields?.join(', ') ?? '';
 }
 function pre(value) { const el = document.createElement('pre'); el.textContent = value; return el; }
 function showRecords() {
@@ -43,7 +46,7 @@ function showRun(run) {
   current = run; $('status').textContent = run.status; $('status').dataset.state = run.status;
   $('input-count').textContent = run.inputs.length; $('output-count').textContent = run.outputs.length;
   $('duration').textContent = `${run.scenario.observeMs / 1000}s`;
-  $('result-note').textContent = run.error ?? (run.status === 'observed' ? 'Capture finished. No assertions were supplied; inspect these outputs to decide what to test.' : 'Assertions compare all captured outputs over the declared interval. Later outputs and external application state are outside this check.');
+  $('result-note').textContent = run.error ?? (run.status === 'running' ? 'Live capture in progress. Assertions are evaluated when the observation window ends.' : run.status === 'observed' ? 'Capture finished. No assertions were supplied; inspect these outputs to decide what to test.' : 'Assertions compare captured outputs over the declared interval. Later outputs and external application state are outside this check.');
   $('assertion').replaceChildren();
   if (run.assertion) $('assertion').append(pre(run.assertion.equal ? 'Expected output matched, including duplicate counts.' : pretty(run.assertion)));
   showRecords();
@@ -62,10 +65,30 @@ async function refresh() {
 function safe(fn) { return async () => { try { await fn(); } catch (error) { message(error.message); } }; }
 $('run').onclick = safe(async () => {
   const value = scenario(); $('run').disabled = true; $('status').textContent = 'Running'; $('status').dataset.state = 'running';
+  $('cancel').disabled = false;
+  $('compare').disabled = true;
+  let live = true, polling = false;
+  const poll = setInterval(async () => {
+    if (polling) return;
+    polling = true;
+    try { const active = await api('active'); if (live && active?.run) { showRun({ ...active.run, status: 'running' }); message(`Run ${active.phase} · ${active.id}`); } } catch { /* final request reports failures */ }
+    finally { polling = false; }
+  }, 500);
   message('Connecting, sending events, and observing output…');
-  try { const run = await api('runs', value); showRun(run); await refresh(); $('history').value = run.id; message(`Run saved locally · ${run.id}`); }
-  finally { $('run').disabled = false; }
+  try {
+    const run = await api('runs', value); live = false;
+    try { await refresh(); $('history').value = run.id; } catch (error) { message(`History could not be loaded: ${error.message}`); }
+    showRun(run); message(run.storage?.saved === false ? 'Run could not be saved. Export the captured run JSON now to retain it.' : `Run saved locally · ${run.id}`);
+  }
+  finally { live = false; clearInterval(poll); $('run').disabled = false; $('cancel').disabled = true; $('compare').disabled = false; }
 });
+$('cancel').onclick = safe(async () => { await api('cancel', {}); message('Cancellation requested. Closing the adapter and preserving captured evidence…'); });
+$('export-run').onclick = () => {
+  if (!current) return message('Run a scenario or load a saved run first.');
+  const url = URL.createObjectURL(new Blob([pretty(current) + '\n'], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = url; link.download = `streamplay-run-${current.id ?? 'active'}.json`; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 $('save').onclick = safe(async () => { await api('scenarios', scenario()); await refresh(); message('Scenario saved locally. Export JSON to commit it with your application.'); });
 $('export').onclick = safe(() => {
   const value = scenario(); const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([pretty(value) + '\n'], { type: 'application/json' }));
@@ -86,4 +109,25 @@ $('compare').onclick = () => {
   $('comparison').textContent = pretty({ reference: reference.id, selected: selected.id, outputsEqual: !added.length && !left.length, added, missing: left.map(JSON.parse), scenarioChanged: canonical(reference.scenario) !== canonical(selected.scenario), referenceEnvironment: reference.environment, selectedEnvironment: selected.environment });
 };
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button))); showRecords(); }; });
-try { config = await api('config'); fill(config.sample); await refresh(); } catch (error) { message(error.message); }
+try {
+  config = await api('config'); $('local-option').disabled = !config.localAdapter; fill(config.sample); await refresh();
+  if (config.active) {
+    $('run').disabled = true; $('cancel').disabled = false; $('compare').disabled = true;
+    let id = config.active.id, loaded = false;
+    try {
+      for (;;) {
+        const active = await api('active');
+        if (!active) break;
+        id = active.id ?? id;
+        if (active.run) {
+          if (!loaded) { fill(active.run.scenario); loaded = true; }
+          showRun({ ...active.run, status: 'running' }); message(`Reconnected to run · ${active.phase}`);
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      await refresh(); const saved = runs.find(run => run.id === id);
+      if (saved) { showRun(saved); $('history').value = saved.id; message(`Run saved locally · ${saved.id}`); }
+      else message('The run ended but no saved artifact was found. Check the server output.');
+    } finally { $('run').disabled = false; $('cancel').disabled = true; $('compare').disabled = false; }
+  }
+} catch (error) { message(error.message); }

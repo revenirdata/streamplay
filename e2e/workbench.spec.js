@@ -18,6 +18,7 @@ test('edit, execute, inspect raw data, save, reload and compare actual runs', as
   await page.locator('#events').fill(JSON.stringify([{ order_id: '<img src=x onerror=alert(1)>', quantity: 3, unit_price_cents: 1000 }]));
   await page.getByRole('button', { name: 'Run scenario' }).click();
   await expect(page.locator('#output-count')).toHaveText('1');
+  await expect(page.locator('#run')).toBeEnabled();
   await expect(page.locator('.record')).toContainText('3000');
   await expect(page.locator('.record img')).toHaveCount(0);
   await page.locator('#baseline').selectOption(firstId);
@@ -33,6 +34,23 @@ test('edit, execute, inspect raw data, save, reload and compare actual runs', as
   await page.getByRole('button', { name: 'Run scenario' }).click();
   await expect(page.locator('#status')).toHaveText('failed');
   expect(errors).toEqual([]);
+});
+
+test('shows live output before completion and cancels without claiming a passed assertion', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#events')).toHaveValue(/order-101/);
+  await page.locator('#window').fill('10000');
+  await page.getByRole('button', { name: 'Run scenario' }).click();
+  await expect(page.locator('#output-count')).toHaveText('2');
+  await expect(page.locator('#status')).toHaveText('running');
+  await expect(page.locator('#compare')).toBeDisabled();
+  await page.reload();
+  await expect(page.locator('#status')).toHaveText('running');
+  await expect(page.locator('#output-count')).toHaveText('2');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.locator('#status')).toHaveText('cancelled');
+  await expect(page.locator('#run')).toBeEnabled();
+  await expect(page.locator('#output-count')).toHaveText('2');
 });
 
 for (const width of [1440, 390]) test(`workbench fits ${width}px and keeps inputs accessible`, async ({ page }) => {

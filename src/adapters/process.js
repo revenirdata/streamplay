@@ -13,7 +13,7 @@ export async function processAdapter({ onOutput, onLog }, file = defaultFile) {
   const source = await readFile(file);
   let failure;
   let finished = false;
-  const child = spawn(process.execPath, [file], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+  const child = spawn(process.execPath, [file], { stdio: ['pipe', 'pipe', 'pipe', 'ipc'], windowsHide: true });
   child.stdin.on('error', error => { failure = error; });
   child.on('error', error => { failure = error; });
   const closed = new Promise(resolve => child.once('close', (code, signal) => {
@@ -23,6 +23,16 @@ export async function processAdapter({ onOutput, onLog }, file = defaultFile) {
   }));
   createInterface({ input: child.stdout }).on('line', line => onOutput(record(line, { transport: 'stdio' })));
   createInterface({ input: child.stderr }).on('line', onLog);
+  // The observation clock should not include runtime startup on a busy machine.
+  let startupTimer;
+  try {
+    await Promise.race([
+      new Promise(resolve => child.on('message', message => { if (message?.type === 'ready') resolve(); })),
+      closed.then(() => { throw failure ?? new Error('Example exited before signaling readiness.'); }),
+      new Promise((_, reject) => { startupTimer = setTimeout(() => reject(new Error('Example did not signal readiness within 10 seconds.')), 10_000); })
+    ]);
+  } catch (error) { child.kill(); await closed; throw error; }
+  finally { clearTimeout(startupTimer); }
   return {
     metadata: { engine: 'Node.js example process', version: process.version, sourceSha256: createHash('sha256').update(source).digest('hex'), state: 'fresh process per run' },
     async send(events, onSent) {
@@ -32,8 +42,8 @@ export async function processAdapter({ onOutput, onLog }, file = defaultFile) {
         await new Promise((resolve, reject) => child.stdin.write(raw + '\n', error => error ? reject(error) : resolve()));
         onSent(record(raw, { transport: 'stdio', acknowledgement: 'written to stdin' }));
       }
-      child.stdin.end();
     },
+    async finishInput() { child.stdin.end(); },
     check() { if (failure) throw failure; if (!finished) throw new Error('Example process did not finish within the observation window. Increase the window.'); },
     async close() { if (!finished) child.kill(); await closed; }
   };
