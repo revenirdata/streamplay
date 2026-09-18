@@ -3,14 +3,37 @@ export function validateScenario(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Scenario must be an object.');
   if (value.version !== 1) throw new Error('Scenario version must be 1.');
   if (typeof value.name !== 'string' || !value.name.trim() || value.name.length > 120) throw new Error('Name must be 1–120 characters.');
-  if (!['process', 'kafka'].includes(value.adapter)) throw new Error('Choose process or kafka.');
+  if (!['process', 'kafka', 'local'].includes(value.adapter)) throw new Error('Choose process, kafka, or local.');
   if (!Array.isArray(value.events) || value.events.length < 1 || value.events.length > 1000) throw new Error('Supply 1–1000 JSON events.');
   if (JSON.stringify(value.events).length > 512_000) throw new Error('Events must fit within 512 KB.');
   if (!Number.isInteger(value.observeMs) || value.observeMs < 100 || value.observeMs > 60_000) throw new Error('Observation window must be 100–60000 ms.');
   if (value.expected !== undefined && (!Array.isArray(value.expected) || value.expected.length > 1000)) throw new Error('Expected output must be an array of up to 1000 records.');
+  if (value.scheduleMs !== undefined && (!Array.isArray(value.scheduleMs) || value.scheduleMs.length !== value.events.length || value.scheduleMs.some(n => !Number.isInteger(n) || n < 0) || value.scheduleMs.reduce((a, b) => a + b, 0) > 120_000)) throw new Error('scheduleMs must contain one nonnegative delay per event, totaling at most 120000 ms.');
+  if (value.matchFields !== undefined && (!Array.isArray(value.matchFields) || !value.matchFields.length || value.matchFields.length > 20 || value.matchFields.some(s => typeof s !== 'string' || s.length > 120 || !/^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)*$/.test(s) || s.split('.').some(k => ['__proto__', 'constructor', 'prototype'].includes(k))))) throw new Error('matchFields must contain 1–20 ordinary dot-separated JSON field paths.');
   // Copy only the public scenario contract. Connection settings and commands are never accepted from the browser.
   return structuredClone({ version: 1, name: value.name.trim(), adapter: value.adapter, events: value.events,
-    observeMs: value.observeMs, ...(value.expected === undefined ? {} : { expected: value.expected }) });
+    observeMs: value.observeMs, ...(value.expected === undefined ? {} : { expected: value.expected }),
+    ...(value.scheduleMs === undefined ? {} : { scheduleMs: value.scheduleMs }),
+    ...(value.matchFields === undefined ? {} : { matchFields: value.matchFields }) });
+}
+
+export function assertOutputs(scenario, outputs) {
+  const invalidRecords = outputs.filter(r => r.json === false || r.tombstone === true).length;
+  const project = value => {
+    if (!scenario.matchFields) return value;
+    return Object.fromEntries(scenario.matchFields.map(path => {
+      let current = value;
+      for (const key of path.split('.')) {
+        if (current === null || typeof current !== 'object' || !Object.hasOwn(current, key)) throw new Error(`Missing comparison field: ${path}`);
+        current = current[key];
+      }
+      return [path, current];
+    }));
+  };
+  try {
+    const result = compare(scenario.expected.map(project), outputs.map(r => project(r.value)));
+    return { ...result, equal: result.equal && invalidRecords === 0, invalidRecords, matchFields: scenario.matchFields ?? null };
+  } catch (error) { return { equal: false, error: error.message, invalidRecords, added: [], missing: [] }; }
 }
 
 export function canonical(value) {

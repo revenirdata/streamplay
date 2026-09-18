@@ -18,7 +18,7 @@ The repository is public so contributors can participate while the product devel
 - [ ] Flink/Kinesis example with explicit credentials, resource ownership, cleanup, and cost prerequisites.
 - [ ] Application lifecycle: trusted local launch/reset configuration, readiness, status, and engine logs.
 - [ ] Input keys and transport metadata, send pacing, NDJSON import, and event templates.
-- [ ] Cancel active runs and distinguish cancellation from observation completion.
+- [x] Cooperative cancellation with partial evidence, live inspection, and browser reconnection. Adapter setup and external I/O still need their own bounds.
 - [ ] Stronger isolation: fresh topic bindings plus verified app reset, with late outputs and concurrent producers tested.
 - [ ] Scenario/run compatibility policy and bounded, paginated history storage.
 - [ ] Verified setup on Linux, macOS, and Windows; test version matrix rather than generic compatibility claims.

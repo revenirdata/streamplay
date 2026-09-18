@@ -5,7 +5,7 @@
 [![CI](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml/badge.svg)](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-**Open source · In development · Not a release yet**
+**Open source · Early prototype · Not an MVP or a release yet**
 
 Created by **[Carl Salazar (@kc-salazar)](https://github.com/kc-salazar)**. An open-source project by **[Revenir](https://www.revenirdata.com/streamplay)**.
 
@@ -66,6 +66,9 @@ Exit code `1` means a mismatch or execution error. A scenario without `expected`
 - Save local run snapshots and scenarios; export scenario JSON to Git.
 - Compare outputs between runs with duplicate-sensitive, order-independent matching.
 - Optionally assert exact output records over a declared observation window; run those scenarios in a terminal or CI.
+- Inspect live records, cancel a run while retaining partial evidence, and reconnect after refreshing the browser.
+- Pace events with explicit delays and compare selected JSON fields without changing raw evidence.
+- Attach a trusted [experimental local adapter](docs/LOCAL-ADAPTERS.md) to an existing application.
 
 Local data stays under `.streamplay/`, excluded from Git. No telemetry. Runs can include sensitive event data; use appropriate development fixtures.
 
@@ -89,7 +92,7 @@ Start your app separately and bind it to isolated Kafka input/output topics. Con
 | `STREAMPLAY_PORT` | `4317` |
 | `STREAMPLAY_DATA_DIR` | `.streamplay` |
 
-The initial Kafka adapter supports local plaintext brokers and JSON values. SASL/TLS configuration, record keys on input, pacing, schema registries, automatic app launch, and engine log collection are future work. UTF-8 raw values and tombstone metadata are retained on output; binary decoding is not implemented.
+The initial Kafka adapter supports local plaintext brokers and JSON values. SASL/TLS configuration, record keys on input, schema registries, automatic app launch, and native engine log collection are future work. Local adapters can supply application logs. UTF-8 raw values and tombstone metadata are retained on output; binary decoding is not implemented. JSON assertions reject malformed records and tombstones rather than equating them with JSON strings or nulls.
 
 ## First-release direction
 
@@ -103,7 +106,7 @@ The first release targets these three paths:
 
 Kafka and Kinesis move events. Flink and Kafka Streams process them. Their semantics and APIs differ; StreamPlay shares the workbench around them rather than pretending they are interchangeable. This public development repository precedes the first release; there is no claim that all three integrations are ready.
 
-See the [roadmap](docs/ROADMAP.md) and [architecture](docs/ARCHITECTURE.md).
+See the [validation evidence and gaps](docs/VALIDATION.md), [roadmap](docs/ROADMAP.md), and [architecture](docs/ARCHITECTURE.md). There is no independent adoption evidence yet.
 
 ## Contribute
 

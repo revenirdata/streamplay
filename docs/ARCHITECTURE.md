@@ -28,6 +28,7 @@ Offset filtering excludes old records, but does not identify causal outputs. Par
 - `passed`: supplied expected records matched the observed multiset.
 - `failed`: missing or extra records within the window.
 - `error`: setup, send, capture, resource limit, or cleanup failure. Partial evidence is retained when possible.
+- `cancelled`: operator stopped execution; partial evidence is retained and assertions are not evaluated.
 
 Record order is ignored for assertions; object key order is ignored; array order and duplicate counts are preserved. No automatic time/ID normalization. Error results do not become passing empty-output assertions. A passed check does not prove eventual stream completeness or a known initial application state.
 
@@ -35,4 +36,4 @@ Record order is ignored for assertions; object key order is ignored; array order
 
 Separate engine lifecycle adapters from transport adapters, and allow input and output bindings to use different transports. A Kinesis-input application may emit to SQS; supporting Kinesis input alone would not make that application inspectable. SQS observation is a consuming operation, unlike a Kafka observer with an independent consumer group, so queue ownership, acknowledgment, and competing consumers need an explicit contract.
 
-Kinesis needs its own shard/sequence-number logic. Kafka Streams needs its own launch/reset example even though the boundary transport is Kafka. Move comparison semantics into a shared browser/server module as comparison features expand. Add cancellation, pagination, and atomic artifact publication before long-running sessions are treated as stable.
+Kinesis needs its own shard/sequence-number logic. Kafka Streams needs its own launch/reset example even though the boundary transport is Kafka. An experimental trusted local adapter supports real application pilots; it does not establish native transport support. Cancellation is cooperative, and run artifacts are published atomically after execution. Pagination, crash recovery, and shared browser/server comparison semantics remain work before long-running sessions can be treated as stable.

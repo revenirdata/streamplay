@@ -3,6 +3,8 @@
 // A fresh Node.js process executes this code each time. This is not Flink.
 import { createInterface } from 'node:readline';
 
+if (process.send) process.send({ type: 'ready' }, () => process.disconnect());
+
 for await (const line of createInterface({ input: process.stdin })) {
   try {
     const event = JSON.parse(line);
