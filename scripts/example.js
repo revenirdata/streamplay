@@ -41,7 +41,7 @@ export async function up() {
   }, 'Flink task slots');
   const jobs = await flinkJobs();
   const existing = jobs.find(j => j.name === 'streamplay-orders' && j.state === 'RUNNING');
-  if (!existing) await compose('run', '--rm', '-T', 'sql-client', '-f', '/opt/flink/usrlib/orders.sql');
+  if (!existing) await compose('run', '--rm', '-T', 'sql-client');
   await waitFor(async () => (await flinkJobs()).some(j => j.name === 'streamplay-orders' && j.state === 'RUNNING'), 'the orders job');
   console.log('Kafka → Flink → Kafka is running. Start the workbench with npm start, then select Kafka execution.');
 }

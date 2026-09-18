@@ -30,6 +30,7 @@ services:
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: jobmanager
+        rest.address: jobmanager
         rest.bind-address: 0.0.0.0
         parallelism.default: 1
   taskmanager:
@@ -45,7 +46,7 @@ services:
     image: streamplay-flink-example:local
     profiles: [submit]
     depends_on: [jobmanager, taskmanager]
-    entrypoint: ["/opt/flink/bin/sql-client.sh"]
+    command: ["/opt/flink/bin/sql-client.sh", "-f", "/opt/flink/usrlib/orders.sql"]
     volumes: ["./orders.sql:/opt/flink/usrlib/orders.sql:ro"]
     environment:
       FLINK_PROPERTIES: |
