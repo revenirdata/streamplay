@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 const $ = id => document.getElementById(id);
 let config, current, runs = [], scenarios = [], tab = 'outputs';
+let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
+let lastApplicationConfiguration;
 const pretty = value => JSON.stringify(value, null, 2);
 async function api(path, value) {
   const response = await fetch(`/api/${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -36,7 +38,7 @@ function showRecords() {
   values.forEach((record, i) => {
     const article = document.createElement('article'); article.className = 'record';
     const head = document.createElement('div'); head.className = 'record-head';
-    head.textContent = `#${String(i + 1).padStart(2, '0')} · ${record.topic ?? 'stdio'}${record.partition === undefined ? '' : ` · partition ${record.partition} · offset ${record.offset}`}`;
+    head.textContent = `#${String(i + 1).padStart(2, '0')} · ${record.topic ?? record.transport ?? 'stdio'}${record.partition === undefined ? '' : ` · partition ${record.partition} · offset ${record.offset}`}`;
     const details = document.createElement('details'); const summary = document.createElement('summary'); summary.textContent = 'Raw payload & record metadata';
     const { value, ...metadata } = record; details.append(summary, pre(pretty(metadata)));
     article.append(head, pre(record.json ? pretty(record.value) : record.raw), details); root.append(article);
@@ -63,6 +65,67 @@ async function refresh() {
   options('saved', scenarios, 'Choose a saved scenario', s => s.scenario.name);
 }
 function safe(fn) { return async () => { try { await fn(); } catch (error) { message(error.message); } }; }
+function showApplication() {
+  if (!applicationSnapshot) return;
+  const snapshot = applicationSnapshot;
+  $('application-status').textContent = snapshot.status;
+  $('application-status').dataset.state = snapshot.status;
+  $('application-detail').textContent = snapshot.detail ?? '';
+  const value = snapshot[applicationTab];
+  $('application-records').textContent = applicationTab === 'logs' ? (value ?? []).join('\n') : pretty(value ?? []);
+  for (const button of $('application-actions').querySelectorAll('button')) button.disabled = applicationPending || Boolean(snapshot.busy) || snapshot.runningScenario;
+}
+async function refreshApplication() {
+  applicationSnapshot = await api('application');
+  const next = pretty(applicationSnapshot.configuration);
+  if (next && next !== lastApplicationConfiguration) {
+    if ($('application-config').value === lastApplicationConfiguration) {
+      $('application-config').value = next;
+      if (applicationSnapshot.input) $('application-input').value = pretty(applicationSnapshot.input);
+      if (applicationSnapshot.sample && $('events').value === pretty(config.sample.events)) { fill(applicationSnapshot.sample); config.sample = applicationSnapshot.sample; }
+    }
+    lastApplicationConfiguration = next;
+  }
+  showApplication();
+}
+function initializeApplication(description) {
+  if (!description) return;
+  $('application').hidden = false; $('application-name').textContent = description.name;
+  $('application-config').value = pretty(description.configuration ?? {});
+  lastApplicationConfiguration = $('application-config').value;
+  $('application-input').value = pretty(description.input ?? []);
+  for (const action of description.actions) {
+    const button = document.createElement('button'); button.textContent = action.label;
+    button.dataset.action = action.id;
+    button.onclick = async () => {
+      applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
+      try {
+        const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : undefined;
+        const result = await api('application', { action: action.id, value });
+        $('application-message').textContent = result.message ?? 'Action complete.';
+        if (result.configuration) $('application-config').value = pretty(result.configuration);
+        if (result.input) $('application-input').value = pretty(result.input);
+        if (result.sample) fill(result.sample);
+        await refreshApplication();
+      } catch (error) { $('application-message').textContent = error.message; }
+      finally { applicationPending = false; showApplication(); }
+    };
+    $('application-actions').append(button);
+  }
+  document.querySelectorAll('[data-application-tab]').forEach(button => { button.onclick = () => {
+    applicationTab = button.dataset.applicationTab;
+    document.querySelectorAll('[data-application-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button)));
+    showApplication();
+  }; });
+  let polling = false;
+  const poll = async () => {
+    if (polling) return; polling = true;
+    try { await refreshApplication(); }
+    catch (error) { $('application-status').textContent = 'unavailable'; $('application-detail').textContent = error.message; }
+    finally { polling = false; }
+  };
+  void poll(); setInterval(poll, 1000);
+}
 $('run').onclick = safe(async () => {
   const value = scenario(); $('run').disabled = true; $('status').textContent = 'Running'; $('status').dataset.state = 'running';
   $('cancel').disabled = false;
@@ -110,7 +173,7 @@ $('compare').onclick = () => {
 };
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button))); showRecords(); }; });
 try {
-  config = await api('config'); $('local-option').disabled = !config.localAdapter; fill(config.sample); await refresh();
+  config = await api('config'); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); await refresh();
   if (config.active) {
     $('run').disabled = true; $('cancel').disabled = false; $('compare').disabled = true;
     let id = config.active.id, loaded = false;

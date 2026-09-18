@@ -106,6 +106,8 @@ The first release targets these three paths:
 
 Kafka and Kinesis move events. Flink and Kafka Streams process them. Their semantics and APIs differ; StreamPlay shares the workbench around them rather than pretending they are interchangeable. This public development repository precedes the first release; there is no claim that all three integrations are ready.
 
+Trusted local bindings can now expose lifecycle controls, editable configuration, live observations, logs and state inspection in the workbench. See the experimental [application controls interface](docs/APPLICATION-CONTROLS.md). Application-specific commands and validation stay in the local binding.
+
 See the [validation evidence and gaps](docs/VALIDATION.md), [roadmap](docs/ROADMAP.md), and [architecture](docs/ARCHITECTURE.md). There is no independent adoption evidence yet.
 
 ## Contribute
