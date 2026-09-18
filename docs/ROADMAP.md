@@ -14,6 +14,7 @@ The repository is public so contributors can participate while the product devel
 
 - [ ] Kafka Streams example using an actual JVM application; inspect startup, errors, and explicit state reset.
 - [ ] Kinesis transport: shard discovery, starting positions, partial write retries, throttling, and isolated real-AWS verification.
+- [ ] Independent input/output bindings, beginning with a local Kinesis → Flink → SQS pilot. Preserve raw events and queue acknowledgment semantics; an application does not have to emit to the same transport it consumes.
 - [ ] Flink/Kinesis example with explicit credentials, resource ownership, cleanup, and cost prerequisites.
 - [ ] Application lifecycle: trusted local launch/reset configuration, readiness, status, and engine logs.
 - [ ] Input keys and transport metadata, send pacing, NDJSON import, and event templates.

@@ -33,4 +33,6 @@ Record order is ignored for assertions; object key order is ignored; array order
 
 ## Deliberate next steps
 
-Separate engine lifecycle adapters from transport adapters. Kinesis needs its own shard/sequence-number logic. Kafka Streams needs its own launch/reset example even though the boundary transport is Kafka. Move comparison semantics into a shared browser/server module as comparison features expand. Add cancellation, pagination, and atomic artifact publication before long-running sessions are treated as stable.
+Separate engine lifecycle adapters from transport adapters, and allow input and output bindings to use different transports. A Kinesis-input application may emit to SQS; supporting Kinesis input alone would not make that application inspectable. SQS observation is a consuming operation, unlike a Kafka observer with an independent consumer group, so queue ownership, acknowledgment, and competing consumers need an explicit contract.
+
+Kinesis needs its own shard/sequence-number logic. Kafka Streams needs its own launch/reset example even though the boundary transport is Kafka. Move comparison semantics into a shared browser/server module as comparison features expand. Add cancellation, pagination, and atomic artifact publication before long-running sessions are treated as stable.
