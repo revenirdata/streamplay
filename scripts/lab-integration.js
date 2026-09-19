@@ -14,7 +14,16 @@ import kinesis from '../examples/lab/kinesis-sqs.js';
 import { sourcePresets } from '../src/source-profile.js';
 import { SQSClient, ListQueuesCommand } from '@aws-sdk/client-sqs';
 
-const until = async fn => { const end = Date.now() + 20000; while (Date.now() < end) { const value = await fn(); if (value) return value; await delay(150); } throw new Error('Integration condition timed out'); };
+const until = async fn => {
+  const end = Date.now() + 20000; let watchdog;
+  try {
+    // Keep a referenced deadline while fetch/AbortSignal uses unreferenced handles during startup.
+    return await Promise.race([
+      (async () => { while (Date.now() < end) { const value = await fn(); if (value) return value; await delay(150); } throw new Error('Integration condition timed out'); })(),
+      new Promise((_, reject) => { watchdog = setTimeout(() => reject(new Error('Integration condition timed out')), 20000); })
+    ]);
+  } finally { clearTimeout(watchdog); }
+};
 const dir = await mkdtemp(join(tmpdir(), 'streamplay-real-lab-'));
 const mode = process.argv[2] ?? 'queues';
 const evidence = { mode, startedAt: new Date().toISOString(), checks: [] };
