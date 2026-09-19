@@ -24,6 +24,11 @@ export function quantityDuration(rate, quantity) {
   return ms;
 }
 
+export function thresholdPhases(threshold, step, durationMs = 1000, intervalMs = 500) {
+  if (!Number.isFinite(threshold) || !Number.isFinite(step) || step <= 0) throw new Error('Threshold must be finite and step must be positive.');
+  return ['below', 'exactly-at', 'above'].map((name, index) => ({ name, kind: 'emit', value: threshold + (index - 1) * step, durationMs, intervalMs }));
+}
+
 export function buildExperiment({ name = 'Event sequence', adapter = 'process', observeMs = 1000, template,
   deviceIds, deviceField = 'device_id', valueField = 'value', phases, expected, matchFields }) {
   if (!template || typeof template !== 'object' || Array.isArray(template)) throw new Error('Template must be a JSON object.');

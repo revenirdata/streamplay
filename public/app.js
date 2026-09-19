@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createPipelineGraph } from './graph.js';
-import { buildExperiment } from './experiment.js';
+import { buildExperiment, thresholdPhases } from './experiment.js';
 import { validateScenario } from './scenario.js';
+import { initializeLab } from './lab.js';
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
 let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
 let lastApplicationConfiguration;
 let phaseNames;
+let phaseExpectations;
 const pretty = value => JSON.stringify(value, null, 2);
 async function api(path, value) {
   const response = await fetch(`/api/${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -19,7 +21,7 @@ function message(text) { $('message').textContent = text; }
 function scenario() {
   const expected = $('expected').value.trim();
   const schedule = $('schedule').value.trim(), fields = $('fields').value.trim();
-  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}), timingMode: $('timing-mode').value, tailMs: Number($('tail').value), ...(phaseNames ? { phaseNames } : {}) };
+  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}), timingMode: $('timing-mode').value, tailMs: Number($('tail').value), ...(phaseNames ? { phaseNames } : {}), ...($('phase-expected').value.trim() ? { phaseExpectations: JSON.parse($('phase-expected').value) } : {}) };
 }
 function connection() {
   $('connection').textContent = $('adapter').value === 'process'
@@ -32,6 +34,7 @@ function fill(value) {
   $('events').value = pretty(value.events); $('expected').value = value.expected === undefined ? '' : pretty(value.expected); connection();
   $('schedule').value = value.scheduleMs ? pretty(value.scheduleMs) : ''; $('fields').value = value.matchFields?.join(', ') ?? '';
   $('timing-mode').value = value.timingMode ?? 'relative'; $('tail').value = value.tailMs ?? 0; phaseNames = value.phaseNames;
+  phaseExpectations = value.phaseExpectations; $('phase-expected').value = phaseExpectations ? pretty(phaseExpectations) : '';
 }
 function pre(value) { const el = document.createElement('pre'); el.textContent = value; return el; }
 function showRecords() {
@@ -58,6 +61,7 @@ function showRun(run) {
   $('result-note').textContent = run.error ?? (run.status === 'running' ? 'Live capture in progress. Assertions are evaluated when the observation window ends.' : run.status === 'observed' ? 'Capture finished. No assertions were supplied; inspect these outputs to decide what to test.' : 'Assertions compare captured outputs over the declared interval. Later outputs and external application state are outside this check.');
   $('assertion').replaceChildren();
   if (run.assertion) $('assertion').append(pre(run.assertion.equal ? 'Expected output matched, including duplicate counts.' : pretty(run.assertion)));
+  if (run.phaseAssertions) $('assertion').append(pre(pretty(run.phaseAssertions)));
   showRecords();
 }
 function options(id, values, placeholder, label) {
@@ -78,6 +82,10 @@ $('sequence-build').onclick = safe(() => {
     deviceField: $('sequence-identity').value, valueField: $('sequence-value').value, phases: JSON.parse($('sequence-phases').value) });
   fill(value); graph.preview(value.adapter);
   message(`Generated ${value.events.length} events. Inspect the JSON and add expected outputs to make this a test; no result is assumed.`);
+});
+$('threshold-build').onclick = safe(() => {
+  $('sequence-phases').value = pretty(thresholdPhases(Number($('threshold-value').value), Number($('threshold-step').value), Number($('threshold-duration').value)));
+  message('Below, exactly at, and above phases prepared. Generate the sequence, then define expected outputs for your application.');
 });
 $('events').addEventListener('input', () => { phaseNames = undefined; });
 $('schedule').addEventListener('input', () => { phaseNames = undefined; });
@@ -198,7 +206,7 @@ $('compare').onclick = () => {
 };
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button))); showRecords(); }; });
 try {
-  config = await api('config'); graph.update({ config, adapter: config.sample.adapter }); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); await refresh();
+  config = await api('config'); graph.update({ config, adapter: config.sample.adapter }); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); initializeLab(config.lab, { api, graph, config }); await refresh();
   if (config.active) {
     $('run').disabled = true; $('cancel').disabled = false; $('compare').disabled = true;
     let id = config.active.id, loaded = false;

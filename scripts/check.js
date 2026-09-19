@@ -13,4 +13,4 @@ async function check(directory) {
     }
   }
 }
-for (const directory of ['src', 'public', 'scripts', 'examples/process', 'examples/adapters', 'test']) await check(directory);
+for (const directory of ['src', 'public', 'scripts', 'examples/process', 'examples/adapters', 'examples/lab', 'test']) await check(directory);

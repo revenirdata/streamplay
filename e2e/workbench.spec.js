@@ -29,7 +29,7 @@ test('edit, execute, inspect raw data, save, reload and compare actual runs', as
   await page.getByRole('button', { name: 'Load run & scenario' }).click();
   await expect(page.locator('#output-count')).toHaveText('2');
   await expect(page.locator('#events')).toHaveValue(/order-101/);
-  await page.locator('summary').filter({ hasText: 'Expected output' }).click();
+  await page.locator('summary').filter({ hasText: /^Expected output optional$/ }).click();
   await page.locator('#expected').fill('[]');
   await page.getByRole('button', { name: 'Run scenario' }).click();
   await expect(page.locator('#status')).toHaveText('failed');
@@ -69,7 +69,7 @@ test('generates a multi-entity sequence, checks real output, and imports a saved
   await page.locator('#window').fill('1000');
   await page.locator('#sequence-build').click();
   await expect(page.locator('#message')).toContainText('Generated 6 events');
-  await page.locator('summary').filter({ hasText: 'Expected output' }).click();
+  await page.locator('summary').filter({ hasText: /^Expected output optional$/ }).click();
   await page.locator('#expected').fill(JSON.stringify([
     { order_id: 'device-001', total_cents: 6000 }, { order_id: 'device-002', total_cents: 6000 },
     { order_id: 'device-001', total_cents: 6000 }, { order_id: 'device-002', total_cents: 6000 },

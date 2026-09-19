@@ -88,10 +88,10 @@ export function createPipelineGraph() {
     if (!context.config) return;
     const { config, run, snapshot, adapter } = context;
     if (mode === 'run' && !run) mode = 'preview';
-    if (mode === 'application' && !config.application) mode = 'preview';
+    if (mode === 'application' && !config.application && !config.lab) mode = 'preview';
     $('graph-mode').value = mode;
     $('graph-mode').querySelector('[value="run"]').disabled = !run;
-    $('graph-mode').querySelector('[value="application"]').disabled = !config.application;
+    $('graph-mode').querySelector('[value="application"]').disabled = !config.application && !config.lab;
     evidence = graphEvidence(mode, run, snapshot);
     const graphAdapter = mode === 'run' ? run.scenario.adapter : mode === 'application' ? 'local' : adapter ?? config.sample.adapter;
     let base;
@@ -147,7 +147,7 @@ export function createPipelineGraph() {
     inspect();
   }
   return {
-    update(next) { const first = !context.config; context = { ...context, ...next }; if (first && next.config?.application) mode = 'application'; render(); },
+    update(next) { const first = !context.config; context = { ...context, ...next }; if (first && (next.config?.application || next.config?.lab)) mode = 'application'; render(); },
     showRun(run) { context.run = run; mode = 'run'; render(); },
     preview(adapter) { context.adapter = adapter; mode = 'preview'; render(); }
   };

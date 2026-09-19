@@ -1,5 +1,11 @@
 # StreamPlay
 
+Live-source lab: `npm run lab`. Choose a source preset or use your own JSON template, add independent
+sources, inspect their events and save evidence. Meter totals are an optional profile; StreamPlay also
+supports ordinary application events and sensor measurements. See [setup and transports](docs/LIVE-SOURCES.md)
+and the [local-lab capability inventory](docs/LAB-PARITY.md). The default lab is a JavaScript example;
+`npm run lab -- --example kafka-flink` starts the real Kafka/Flink example.
+
 **A local workbench for streaming development.**
 
 [![CI](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml/badge.svg)](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml)

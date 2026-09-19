@@ -23,6 +23,7 @@ jobs:
       - name: Start isolated MQTT broker
         run: docker run -d --name streamplay-mqtt-test -p 127.0.0.1:18884:1883 -v "$PWD/examples/adapters/mosquitto-test.conf:/mosquitto/config/mosquitto.conf:ro" eclipse-mosquitto:2.0.22
       - run: node scripts/mqtt-integration.js
+      - run: node scripts/lab-integration.js mqtt
       - if: always()
         run: docker rm -f streamplay-mqtt-test
   workbench:
@@ -47,6 +48,26 @@ jobs:
         with:
           name: browser-${{ matrix.os }}
           path: test-results/
+  queue-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: docker run -d --name streamplay-queues -p 127.0.0.1:4567:4566 -e SERVICES=sqs,kinesis -e SQS_ENDPOINT_STRATEGY=path -e LOCALSTACK_HOST=127.0.0.1:4567 localstack/localstack:4.14.0
+      - run: node scripts/lab-integration.js queues
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: queue-recovery-evidence
+          path: .streamplay/evidence/
+          include-hidden-files: true
+      - if: always()
+        run: docker rm -f streamplay-queues
   kafka-flink:
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -16,6 +16,7 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
   let outputBytes = 0;
   let overflow = false;
   let phase = 'connecting';
+  let scenarioPhase = null;
   const update = () => onUpdate({ id: run.id, phase, run });
   const checkAbort = () => { if (signal?.aborted) throw signal.reason ?? new Error('Run cancelled.'); };
   const onSent = event => { run.inputs.push(event); update(); };
@@ -24,7 +25,7 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
       if (!capture) return false;
       outputBytes += Buffer.byteLength(output.raw ?? '');
       if (run.outputs.length >= 10_000 || outputBytes > 5_000_000) { overflow = true; return false; }
-      run.outputs.push(output);
+      run.outputs.push({ ...output, scenarioPhase });
       update();
       return true;
     },
@@ -51,6 +52,7 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
         await delay(scenario.timingMode === 'absolute' ? Math.max(0, plannedMs - (performance.now() - start)) : scenario.scheduleMs[i], undefined, { signal });
         checkAbort(); adapter.check();
         const dispatchedMs = performance.now() - start;
+        scenarioPhase = scenario.phaseNames?.[i] ?? null;
         await adapter.send([scenario.events[i]], onSent);
         run.delivery.samples.push({ index: i, phase: scenario.phaseNames?.[i] ?? null, plannedMs,
           dispatchedMs, acknowledgedMs: performance.now() - start, latenessMs: Math.max(0, dispatchedMs - plannedMs) });
@@ -74,6 +76,11 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
       run.assertion = assertOutputs(scenario, run.outputs);
       run.status = run.assertion.equal ? 'passed' : 'failed';
     } else run.status = 'observed';
+    if (scenario.phaseExpectations) {
+      run.phaseAssertions = scenario.phaseExpectations.map(check => ({ phase: check.phase,
+        ...assertOutputs({ ...scenario, expected: check.expected }, run.outputs.filter(output => output.scenarioPhase === check.phase)) }));
+      run.status = run.phaseAssertions.every(check => check.equal) && run.assertion?.equal !== false ? 'passed' : 'failed';
+    }
   } catch (error) {
     run.status = signal?.aborted ? 'cancelled' : 'error';
     run.error = error.message;

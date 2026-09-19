@@ -13,6 +13,15 @@ export function validateScenario(value) {
   if (value.tailMs !== undefined && (!Number.isInteger(value.tailMs) || value.tailMs < 0 || value.tailMs + (value.scheduleMs ?? []).reduce((a, b) => a + b, 0) > 120000)) throw new Error('Schedule plus tailMs must total at most 120000 ms.');
   if (value.phaseNames !== undefined && (!Array.isArray(value.phaseNames) || value.phaseNames.length !== value.events.length || value.phaseNames.some(s => typeof s !== 'string' || !s.trim() || s.length > 60))) throw new Error('phaseNames must supply one name of 1–60 characters per event.');
   if (value.matchFields !== undefined && (!Array.isArray(value.matchFields) || !value.matchFields.length || value.matchFields.length > 20 || value.matchFields.some(s => typeof s !== 'string' || s.length > 120 || !/^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)*$/.test(s) || s.split('.').some(k => ['__proto__', 'constructor', 'prototype'].includes(k))))) throw new Error('matchFields must contain 1–20 ordinary dot-separated JSON field paths.');
+  if (value.phaseExpectations !== undefined) {
+    if (!Array.isArray(value.phaseExpectations) || !value.phaseExpectations.length || value.phaseExpectations.length > 20 || !value.phaseNames || !value.scheduleMs) throw new Error('Phase expectations require a named scheduled sequence and 1–20 expectations.');
+    const names = new Set();
+    for (const check of value.phaseExpectations) {
+      if (!check || !value.phaseNames.includes(check.phase) || names.has(check.phase) || !Array.isArray(check.expected) || check.expected.length > 1000) throw new Error('Each expected phase must be unique, exist in phaseNames, and contain an expected-output array.');
+      names.add(check.phase);
+    }
+    if (JSON.stringify(value.phaseExpectations).length > 512000) throw new Error('Phase expectations exceed 512 KB.');
+  }
   // Copy only the public scenario contract. Connection settings and commands are never accepted from the browser.
   return structuredClone({ version: 1, name: value.name.trim(), adapter: value.adapter, events: value.events,
     observeMs: value.observeMs, ...(value.expected === undefined ? {} : { expected: value.expected }),
@@ -20,6 +29,7 @@ export function validateScenario(value) {
     ...(value.timingMode === undefined ? {} : { timingMode: value.timingMode }),
     ...(value.tailMs === undefined ? {} : { tailMs: value.tailMs }),
     ...(value.phaseNames === undefined ? {} : { phaseNames: value.phaseNames }),
+    ...(value.phaseExpectations === undefined ? {} : { phaseExpectations: value.phaseExpectations.map(check => ({ phase: check.phase, expected: check.expected })) }),
     ...(value.matchFields === undefined ? {} : { matchFields: value.matchFields }) });
 }
 

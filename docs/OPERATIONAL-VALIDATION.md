@@ -18,8 +18,10 @@ experiment. Distinguish unknown from zero. Queue counts may be approximate; time
 observing a backlog is not the age of the oldest message. Inspectors that consume and delete
 messages can mask a missing downstream consumer; run that test with the inspector paused.
 
-Only application-specific adapters can provide the relevant observations. StreamPlay currently
-does not ship a universal queue monitor, CloudWatch validator, DLQ runner or Flink backpressure
-collector. Import/exported scenarios preserve event plans, not deployed infrastructure or checkpoints.
+The live-source lab now includes a loopback-only SQS queue inspector, pause/resume controls,
+a six-check isolated DLQ/recovery experiment, and a trusted application regression-check runner.
+See [live sources](LIVE-SOURCES.md) and the [capability inventory](LAB-PARITY.md).
+CloudWatch validation and Flink backpressure collection still require application-specific
+instrumentation. Import/exported scenarios preserve event plans, not deployed infrastructure or checkpoints.
 Keep infrastructure tests and provider failure fixtures with their owning applications and run
 them alongside StreamPlay scenarios in CI. Do not send real customer notifications in a test.
