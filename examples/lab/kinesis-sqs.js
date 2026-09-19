@@ -11,8 +11,8 @@ export default async function create() {
   return {
     name: 'Local Kinesis / SQS application', namespace: `${endpoint}/${stream}`, queueEndpoint: endpoint, queueUrls: queues,
     metadata: { inputStream: stream, outputQueues: queues, endpoint, engine: 'External application; configure and start it separately' },
-    async publish(event) {
-      const response = await client.send(new PutRecordCommand({ StreamName: stream, PartitionKey: String(event.device_id ?? event.event_id ?? 'streamplay'), Data: Buffer.from(JSON.stringify(event)) }), { abortSignal: AbortSignal.timeout(10000) });
+    async publish(event, context = {}) {
+      const response = await client.send(new PutRecordCommand({ StreamName: stream, PartitionKey: String(context.sourceId ?? event.device_id ?? 'streamplay'), Data: Buffer.from(JSON.stringify(event)) }), { abortSignal: AbortSignal.timeout(10000) });
       return { meaning: 'Kinesis accepted input; downstream processing not implied', sequenceNumber: response.SequenceNumber, shardId: response.ShardId };
     },
     close: () => client.destroy(),

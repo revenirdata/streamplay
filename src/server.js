@@ -100,10 +100,10 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   if (config.lab) { adapters.local = context => config.lab.scenarioAdapter(context); config.topology ??= config.lab.topology; }
   const server = workbench(config, adapters);
   server.listen(config.port, '127.0.0.1', () => console.log(`StreamPlay → http://127.0.0.1:${server.address().port}\nLocal artifacts: ${config.dataDir}`));
-  server.on('error', error => { console.error(error.message); process.exitCode = 1; });
   let stopping = false;
-  const shutdown = async () => { if (stopping) return; stopping = true; server.close(); await config.lab?.close(); process.exit(0); };
-  process.on('SIGINT', shutdown); process.on('SIGTERM', shutdown);
+  const shutdown = async (code = 0) => { if (stopping) return; stopping = true; server.close(); await config.lab?.close(); process.exit(code); };
+  server.on('error', error => { console.error(error.message); void shutdown(1); });
+  process.on('SIGINT', () => void shutdown()); process.on('SIGTERM', () => void shutdown());
   // IPC permits graceful shutdown on Windows, where child.kill() terminates immediately.
-  if (process.send) { process.on('message', message => { if (message === 'shutdown') void shutdown(); }); process.on('disconnect', shutdown); }
+  if (process.send) { process.on('message', message => { if (message === 'shutdown') void shutdown(); }); process.on('disconnect', () => void shutdown()); }
 }

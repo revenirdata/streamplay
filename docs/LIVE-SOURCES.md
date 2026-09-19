@@ -65,10 +65,13 @@ removes its own unique queues and never purges configured output queues.
 ## Trusted application hooks
 
 A lab module exports an async factory receiving `{ onOutput, onLog }`. Return `name`,
-`namespace`, `publish(event)`, optional `close`, `check`, `metadata`, `topology`, `profile`,
+`namespace`, `publish(event, context)`, optional `close`, `check`, `metadata`, `topology`, `profile`,
 `configure(value)`, `state()`, `prepareScenario(scenario, signal)` and `cleanupScenario(prepared)`.
 Configuration and state are application-defined. The included JavaScript example demonstrates
 them; generic Kafka/MQTT cannot inspect arbitrary processor internals automatically.
+Live publication supplies `context.sourceId` independently of the payload shape. The Kinesis
+example uses it as the partition key. Imported scenarios have no context and fall back to
+`device_id` or the fixed `streamplay` key; customize the trusted adapter for other partitioning.
 
 `checks` is an optional list of `{ name, command, args, cwd, timeoutMs, successPattern }`.
 Only startup code sets these definitions. Use a command that exits nonzero for failed tests and

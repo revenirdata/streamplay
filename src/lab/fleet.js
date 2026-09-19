@@ -21,7 +21,7 @@ export function createFleet({ publish, ledger, namespace, onInput = () => {}, on
     const total = ledger.get(key) + (profile.accumulate ? rate * elapsedMs / 60000 : 0);
     if (profile.accumulate) await ledger.reserve(key, total);
     const event = renderSource(profile, { id: item.id, eventId: randomUUID(), value: rate, total, index: item.sent, timestamp: new Date().toISOString() });
-    const acknowledgement = await publish(event);
+    const acknowledgement = await publish(event, { sourceId: item.id });
     onInput(event, { transport: acknowledgement, elapsedMs, phase, total: profile.accumulate ? total : null });
     item.sent++; item.total = total;
     return event;
