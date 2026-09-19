@@ -91,6 +91,7 @@ export function workbench(config = configuration(), adapters = {}) {
       } finally { active = null; controller = null; }
     } catch (error) { send(400, { error: error.message }); }
   });
+  server.cancelActiveRun = () => controller?.abort(new Error('Workbench shutdown.'));
   return server;
 }
 

@@ -145,8 +145,8 @@ function initializeApplication(description) {
         if (result.configuration) $('application-config').value = pretty(result.configuration);
         if (result.input) $('application-input').value = pretty(result.input);
         if (result.sample) fill(result.sample);
-        if (result.controls) applicationControls.fill(result.controls);
         await refreshApplication();
+        if (result.controls) applicationControls.fill(result.controls);
       } catch (error) { $('application-message').textContent = error.message; }
       finally { applicationPending = false; showApplication(); }
     };
