@@ -21,3 +21,14 @@ test('actual boundary metadata stays expanded and paused inspection freezes only
   await expect(page.locator('.graph-record')).toHaveCount(3);
   await expect(page.locator('.graph-record details[open]')).toHaveCount(1);
 });
+
+test('recovery view keeps long application names and real topic identifiers inside a narrow screen', async ({ page }) => {
+  const topology = { version: 1, adapter: 'local', nodes: [{ id: 'input', kind: 'topic', label: 'recovery-in-9ea90c15d8984940b378156763320636', observe: 'inputs' }, { id: 'flink', kind: 'processor', label: 'Flink · count and sum by source', observe: 'none' }, { id: 'output', kind: 'topic', label: 'recovery-out-9ea90c15d8984940b378156763320636', observe: 'outputs' }], edges: [{ from: 'input', to: 'flink' }, { from: 'flink', to: 'output', observe: 'outputs' }] };
+  await page.route('**/api/config', async route => { const original = await (await route.fetch()).json(); await route.fulfill({ json: { ...original, topology, application: { name: 'Stateful Flink worker recovery', view: 'recovery', actions: [{ id: 'run', label: 'Run worker recovery experiment', input: 'none' }] } } }); });
+  await page.route('**/api/application', route => route.fulfill({ json: { status: 'passed', topology, inputs: [], outputs: [{ json: true, value: { source_id: 'sensor-a', total: 15 }, raw: '{"source_id":"sensor-a","total":15}', offset: '5', topic: topology.nodes[2].label }], state: { restored: 1 } } }));
+  await page.goto('/'); await page.locator('[data-graph-node="output"]').click();
+  await expect(page.locator('#application-status')).toHaveText('passed');
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.locator('.workspace')).toBeHidden();
+});

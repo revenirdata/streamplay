@@ -39,7 +39,7 @@ try {
   const download = page.waitForEvent('download'); await page.locator('#application-export').click();
   await (await download).saveAs(resolve(directory, 'browser-evidence.json'));
   await page.setViewportSize({ width: 390, height: 900 });
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await until(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Mobile layout', 5000);
   assert.deepEqual(errors, []);
   console.log('PASS real Flink browser: input JSON, metadata, paused view, checkpoint restore, output JSON, export and mobile layout');
 } finally {
