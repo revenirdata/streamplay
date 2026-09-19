@@ -44,7 +44,7 @@ export async function processAdapter({ onOutput, onLog }, file = defaultFile) {
       }
     },
     async finishInput() { child.stdin.end(); },
-    check() { if (failure) throw failure; if (!finished) throw new Error('Example process did not finish within the observation window. Increase the window.'); },
+    check({ complete = false } = {}) { if (failure) throw failure; if (complete && !finished) throw new Error('Example process did not finish within the observation window. Increase the window.'); },
     async close() { if (!finished) child.kill(); await closed; }
   };
 }

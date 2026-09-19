@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createPipelineGraph } from './graph.js';
+import { buildExperiment, thresholdPhases } from './experiment.js';
+import { validateScenario } from './scenario.js';
+import { initializeLab } from './lab.js';
+import { createApplicationControls } from './application-controls.js';
+import { initializeDeliveryAudit, showDeliveryAudit } from './reconciliation.js';
+initializeDeliveryAudit();
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
 let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
 let lastApplicationConfiguration;
+let applicationControls;
+let phaseNames;
+let phaseExpectations;
 const pretty = value => JSON.stringify(value, null, 2);
 async function api(path, value) {
   const response = await fetch(`/api/${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -16,7 +25,7 @@ function message(text) { $('message').textContent = text; }
 function scenario() {
   const expected = $('expected').value.trim();
   const schedule = $('schedule').value.trim(), fields = $('fields').value.trim();
-  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}) };
+  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}), timingMode: $('timing-mode').value, tailMs: Number($('tail').value), ...(phaseNames ? { phaseNames } : {}), ...($('phase-expected').value.trim() ? { phaseExpectations: JSON.parse($('phase-expected').value) } : {}) };
 }
 function connection() {
   $('connection').textContent = $('adapter').value === 'process'
@@ -28,12 +37,14 @@ function fill(value) {
   $('name').value = value.name; $('adapter').value = value.adapter; $('window').value = value.observeMs;
   $('events').value = pretty(value.events); $('expected').value = value.expected === undefined ? '' : pretty(value.expected); connection();
   $('schedule').value = value.scheduleMs ? pretty(value.scheduleMs) : ''; $('fields').value = value.matchFields?.join(', ') ?? '';
+  $('timing-mode').value = value.timingMode ?? 'relative'; $('tail').value = value.tailMs ?? 0; phaseNames = value.phaseNames;
+  phaseExpectations = value.phaseExpectations; $('phase-expected').value = phaseExpectations ? pretty(phaseExpectations) : '';
 }
 function pre(value) { const el = document.createElement('pre'); el.textContent = value; return el; }
 function showRecords() {
   if (!current) return;
   const root = $('record-list'); root.replaceChildren();
-  if (tab === 'metadata') { root.append(pre(pretty({ id: current.id, startedAt: current.startedAt, finishedAt: current.finishedAt, environment: current.environment, observation: current.observation, error: current.error }))); return; }
+  if (tab === 'metadata') { root.append(pre(pretty({ id: current.id, startedAt: current.startedAt, finishedAt: current.finishedAt, environment: current.environment, observation: current.observation, delivery: current.delivery, error: current.error }))); return; }
   if (tab === 'logs') { root.append(pre(current.logs.join('\n') || 'No process or adapter logs captured. Kafka mode does not yet collect application logs.')); return; }
   const values = current[tab];
   if (!values.length) { root.append(pre('No records captured in this run.')); return; }
@@ -54,6 +65,7 @@ function showRun(run) {
   $('result-note').textContent = run.error ?? (run.status === 'running' ? 'Live capture in progress. Assertions are evaluated when the observation window ends.' : run.status === 'observed' ? 'Capture finished. No assertions were supplied; inspect these outputs to decide what to test.' : 'Assertions compare captured outputs over the declared interval. Later outputs and external application state are outside this check.');
   $('assertion').replaceChildren();
   if (run.assertion) $('assertion').append(pre(run.assertion.equal ? 'Expected output matched, including duplicate counts.' : pretty(run.assertion)));
+  if (run.phaseAssertions) $('assertion').append(pre(pretty(run.phaseAssertions)));
   showRecords();
 }
 function options(id, values, placeholder, label) {
@@ -68,16 +80,40 @@ async function refresh() {
   options('saved', scenarios, 'Choose a saved scenario', s => s.scenario.name);
 }
 function safe(fn) { return async () => { try { await fn(); } catch (error) { message(error.message); } }; }
+$('sequence-build').onclick = safe(() => {
+  const value = buildExperiment({ name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value),
+    template: JSON.parse($('events').value)[0], deviceIds: $('sequence-devices').value.split(',').map(s => s.trim()),
+    deviceField: $('sequence-identity').value, valueField: $('sequence-value').value, phases: JSON.parse($('sequence-phases').value) });
+  fill(value); graph.preview(value.adapter);
+  message(`Generated ${value.events.length} events. Inspect the JSON and add expected outputs to make this a test; no result is assumed.`);
+});
+$('threshold-build').onclick = safe(() => {
+  $('sequence-phases').value = pretty(thresholdPhases(Number($('threshold-value').value), Number($('threshold-step').value), Number($('threshold-duration').value)));
+  message('Below, exactly at, and above phases prepared. Generate the sequence, then define expected outputs for your application.');
+});
+$('events').addEventListener('input', () => { phaseNames = undefined; });
+$('schedule').addEventListener('input', () => { phaseNames = undefined; });
+$('import-scenario').onchange = safe(async () => {
+  const file = $('import-scenario').files[0]; if (!file) return;
+  if (file.size > 1000000) throw new Error('Import must fit within 1 MB.');
+  const value = JSON.parse(await file.text());
+  const scenario = validateScenario(value.scenario ?? value);
+  fill(scenario); graph.preview(scenario.adapter);
+  message('Settings imported. Review the adapter and expected output, then run. No connection settings or executable commands were imported.');
+});
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
+  if (snapshot.deliveryAudit) showDeliveryAudit(snapshot.deliveryAudit);
+  applicationControls?.update(snapshot);
+  applicationControls?.setDisabled(applicationPending);
   graph.update({ snapshot });
   $('application-status').textContent = snapshot.status;
   $('application-status').dataset.state = snapshot.status;
   $('application-detail').textContent = snapshot.detail ?? '';
   const value = snapshot[applicationTab];
   $('application-records').textContent = applicationTab === 'logs' ? (value ?? []).join('\n') : pretty(value ?? []);
-  for (const button of $('application-actions').querySelectorAll('button')) button.disabled = applicationPending || Boolean(snapshot.busy) || snapshot.runningScenario;
+  for (const button of $('application-actions').querySelectorAll('button')) button.disabled = applicationPending || (Boolean(snapshot.busy) && button.dataset.allowBusy !== 'true') || snapshot.runningScenario;
 }
 async function refreshApplication() {
   applicationSnapshot = await api('application');
@@ -94,23 +130,37 @@ async function refreshApplication() {
 }
 function initializeApplication(description) {
   if (!description) return;
+  if (description.view === 'recovery') {
+    for (const element of document.querySelectorAll('.workspace, .history, #application-advanced, #delivery-audit')) element.hidden = true;
+    document.querySelector('h1').textContent = 'Flink recovery test';
+    document.querySelector('.intro .sub').textContent = 'Input records, checkpoints, and output records during a worker restart.';
+  }
+  if (description.view === 'delivery') {
+    for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export')) element.hidden = true;
+    document.querySelector('h1').textContent = 'Delivery checks';
+    document.querySelector('.intro .sub').textContent = 'Published events and downstream observations by event ID.';
+  }
   $('application').hidden = false; $('application-name').textContent = description.name;
+  applicationControls = createApplicationControls($('application-controls'), description.controls);
+  $('application-advanced').open = !description.controls?.length;
   $('application-config').value = pretty(description.configuration ?? {});
   lastApplicationConfiguration = $('application-config').value;
   $('application-input').value = pretty(description.input ?? []);
   for (const action of description.actions) {
     const button = document.createElement('button'); button.textContent = action.label;
     button.dataset.action = action.id;
+    button.dataset.allowBusy = String(Boolean(action.allowWhileBusy));
     button.onclick = async () => {
-      applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
       try {
-        const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : undefined;
+        const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : action.input === 'controls' ? applicationControls.read() : undefined;
+        applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
         const result = await api('application', { action: action.id, value });
         $('application-message').textContent = result.message ?? 'Action complete.';
         if (result.configuration) $('application-config').value = pretty(result.configuration);
         if (result.input) $('application-input').value = pretty(result.input);
         if (result.sample) fill(result.sample);
         await refreshApplication();
+        if (result.controls) applicationControls.fill(result.controls);
       } catch (error) { $('application-message').textContent = error.message; }
       finally { applicationPending = false; showApplication(); }
     };
@@ -129,6 +179,10 @@ function initializeApplication(description) {
     finally { polling = false; }
   };
   void poll(); setInterval(poll, 1000);
+  $('application-export').onclick = () => {
+    const url = URL.createObjectURL(new Blob([pretty(applicationSnapshot)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'streamplay-application-evidence.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 }
 $('run').onclick = safe(async () => {
   const value = scenario(); $('run').disabled = true; $('status').textContent = 'Running'; $('status').dataset.state = 'running';
@@ -177,7 +231,7 @@ $('compare').onclick = () => {
 };
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button))); showRecords(); }; });
 try {
-  config = await api('config'); graph.update({ config, adapter: config.sample.adapter }); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); await refresh();
+  config = await api('config'); graph.update({ config, adapter: config.sample.adapter }); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); initializeLab(config.lab, { api, graph, config }); await refresh();
   if (config.active) {
     $('run').disabled = true; $('cancel').disabled = false; $('compare').disabled = true;
     let id = config.active.id, loaded = false;

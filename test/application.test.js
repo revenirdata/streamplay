@@ -28,6 +28,10 @@ test('trusted application controls reject unknown actions and serialize with sce
     assert.equal((await post('runs', { version: 1, name: 'conflict', adapter: 'process', events: [{}], observeMs: 100 })).status, 409);
     release(); assert.equal((await pending).status, 200);
     assert.equal((await (await fetch(base + 'application')).json()).busy, null);
+    application.busy = 'background scenario';
+    assert.equal((await post('runs', { version: 1, name: 'background conflict', adapter: 'process', events: [{}], observeMs: 100 })).status, 409);
+    assert.equal((await post('application', { action: 'start' })).status, 409);
+    application.busy = null;
     application.act = async () => { throw new Error('startup failed'); };
     assert.equal((await post('application', { action: 'start' })).status, 400);
     assert.equal((await (await fetch(base + 'application')).json()).busy, null);
