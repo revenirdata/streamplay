@@ -17,6 +17,8 @@ assets['/scenario.js'] = ['../src/scenario.js', 'text/javascript'];
 assets['/source-profile.js'] = ['../src/source-profile.js', 'text/javascript'];
 assets['/lab.js'] = ['lab.js', 'text/javascript'];
 assets['/application-controls.js'] = ['application-controls.js', 'text/javascript'];
+assets['/reconciliation.js'] = ['reconciliation.js', 'text/javascript'];
+assets['/delivery-model.js'] = ['../src/reconciliation.js', 'text/javascript'];
 const sample = JSON.parse(await readFile(new URL('../examples/scenarios/orders.process.json', import.meta.url), 'utf8'));
 
 export function workbench(config = configuration(), adapters = {}) {

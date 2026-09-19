@@ -92,6 +92,10 @@ A new run does **not** reset Kafka topics, Flink state, or the external applicat
 
 ## Bring your application
 
+To distinguish delayed events from unaccounted ones after an interruption, use
+[delivery reconciliation](docs/DELIVERY-RECONCILIATION.md). It records exact IDs at named
+checkpoints and includes a real MQTT before/after recovery demonstration.
+
 ### Repeatable event sequences
 
 Expand **Build a device event sequence** to generate inputs from the first JSON event in the

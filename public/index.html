@@ -81,6 +81,16 @@
 </section>
 </div>
 <section class="panel history"><div class="panel-title"><h2>03 <span>Compare & repeat</span></h2><button id="refresh" class="quiet">Refresh history</button></div><div class="history-grid"><div><label for="history">Saved runs</label><select id="history"><option value="">No runs yet</option></select><p class="hint">Runs are saved locally, with the scenario used for that execution.</p><button id="load-run">Load run & scenario</button></div><div><label for="baseline">Compare selected run against</label><select id="baseline"><option value="">Choose a reference run</option></select><button id="compare">Compare outputs</button><p class="hint">Comparison preserves duplicates. A difference is an observation, not automatically a bug.</p></div><div><label for="saved">Saved scenarios</label><select id="saved"><option value="">No saved scenarios</option></select><button id="load-scenario">Load scenario</button><p class="hint">Export scenario JSON to version it with your application code.</p></div></div><pre id="comparison" hidden></pre></section>
+<section class="panel" id="delivery-audit">
+<h2>Account for every test event</h2>
+<p class="hint">Compare receipts for the same event IDs at named checkpoints. See what arrived late and exactly which events remain unaccounted for after an interruption.</p>
+<label for="delivery-import">Import delivery evidence</label><input id="delivery-import" type="file" accept="application/json,.json">
+<p id="delivery-summary" role="status">Run a configured recovery experiment or import its evidence JSON.</p>
+<div id="delivery-checkpoints"></div>
+<details><summary>Event timeline and fault evidence</summary><pre id="delivery-evidence" class="application-records"></pre></details>
+<p id="delivery-boundary" class="hint">A broker acknowledgement does not prove downstream processing. Missing receipts do not establish permanent loss.</p>
+<button id="delivery-export">Export delivery evidence</button>
+</section>
 <footer><span>Created by <a href="https://github.com/kc-salazar">Carl Salazar</a> · Apache 2.0</span><span>Kafka/Flink integration in development · Kinesis & Kafka Streams next</span></footer>
 </main>
 </body></html>

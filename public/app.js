@@ -4,6 +4,8 @@ import { buildExperiment, thresholdPhases } from './experiment.js';
 import { validateScenario } from './scenario.js';
 import { initializeLab } from './lab.js';
 import { createApplicationControls } from './application-controls.js';
+import { initializeDeliveryAudit, showDeliveryAudit } from './reconciliation.js';
+initializeDeliveryAudit();
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
@@ -102,6 +104,7 @@ $('import-scenario').onchange = safe(async () => {
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
+  if (snapshot.deliveryAudit) showDeliveryAudit(snapshot.deliveryAudit);
   applicationControls?.update(snapshot);
   applicationControls?.setDisabled(applicationPending);
   graph.update({ snapshot });
@@ -127,6 +130,11 @@ async function refreshApplication() {
 }
 function initializeApplication(description) {
   if (!description) return;
+  if (description.view === 'delivery') {
+    for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export')) element.hidden = true;
+    document.querySelector('h1').textContent = 'Account for every event.';
+    document.querySelector('.intro .sub').textContent = 'Send known events, interrupt delivery, and inspect the receipts.';
+  }
   $('application').hidden = false; $('application-name').textContent = description.name;
   applicationControls = createApplicationControls($('application-controls'), description.controls);
   $('application-advanced').open = !description.controls?.length;

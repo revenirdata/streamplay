@@ -24,6 +24,13 @@ jobs:
         run: docker run -d --name streamplay-mqtt-test -p 127.0.0.1:18884:1883 -v "$PWD/examples/adapters/mosquitto-test.conf:/mosquitto/config/mosquitto.conf:ro" eclipse-mosquitto:2.0.22
       - run: node scripts/mqtt-integration.js
       - run: node scripts/lab-integration.js mqtt
+      - run: node scripts/recovery-integration.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: delivery-reconciliation-evidence
+          path: .streamplay/evidence/delivery/
+          include-hidden-files: true
       - if: always()
         run: docker rm -f streamplay-mqtt-test
   workbench:
