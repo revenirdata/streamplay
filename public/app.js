@@ -132,13 +132,13 @@ function initializeApplication(description) {
   if (!description) return;
   if (description.view === 'recovery') {
     for (const element of document.querySelectorAll('.workspace, .history, #application-advanced, #delivery-audit')) element.hidden = true;
-    document.querySelector('h1').textContent = 'Watch Flink recover.';
-    document.querySelector('.intro .sub').textContent = 'Inspect real input JSON, checkpoint restoration, and output after a worker interruption.';
+    document.querySelector('h1').textContent = 'Flink recovery test';
+    document.querySelector('.intro .sub').textContent = 'Input records, checkpoints, and output records during a worker restart.';
   }
   if (description.view === 'delivery') {
     for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export')) element.hidden = true;
-    document.querySelector('h1').textContent = 'Account for every event.';
-    document.querySelector('.intro .sub').textContent = 'Send known events, interrupt delivery, and inspect the receipts.';
+    document.querySelector('h1').textContent = 'Delivery checks';
+    document.querySelector('.intro .sub').textContent = 'Published events and downstream observations by event ID.';
   }
   $('application').hidden = false; $('application-name').textContent = description.name;
   applicationControls = createApplicationControls($('application-controls'), description.controls);

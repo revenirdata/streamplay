@@ -16,7 +16,7 @@ try {
   browser = await chromium.launch({ headless: true, ...(process.env.STREAMPLAY_CHROME ? { executablePath: process.env.STREAMPLAY_CHROME } : {}) });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1080 } }); const errors = [];
   page.on('pageerror', error => errors.push(error.message)); await page.goto(base);
-  await until(async () => (await page.locator('h1').textContent()).includes('Account for every event'), 'Delivery view did not load');
+  await until(async () => (await page.locator('h1').textContent()) === 'Delivery checks', 'Delivery view did not load');
   assert.equal(await page.locator('.workspace').isVisible(), false, 'Unrelated scenario editor must be hidden in the recovery view');
   for (const session of ['ephemeral','persistent']) {
     await page.getByLabel('Subscriber recovery policy').selectOption(session);

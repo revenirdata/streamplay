@@ -55,7 +55,7 @@ test('shows live output before completion and cancels without claiming a passed 
 
 for (const width of [1440, 390]) test(`workbench fits ${width}px and keeps inputs accessible`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 }); await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Edit. Run. Inspect. Repeat.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Streaming workbench' })).toBeVisible();
   await expect(page.getByLabel('Input events')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/workbench-${width}.png`, fullPage: true });
