@@ -20,6 +20,8 @@ This inventory covers the reusable capabilities of the reference local Flink lab
 | Missing, duplicate and early output detection | Exact multiset assertions; optional per-phase expected outputs | Test deliberately produces an early alert with the correct overall count and still fails |
 | Progress, cancellation, repeat/import/export | Live capture, phase names, episode status, cancellation, source-plan import/export, scenario/run history | Browser and runner checks; import never executes commands or restores checkpoints |
 | Application configuration and state | Trusted module `configure` and `state` hooks; visible unsupported state | Demonstrated by JS example; arbitrary Flink state requires explicit instrumentation |
+| Existing application controls | Typed forms, dynamic source selection, grouped settings, background-operation locks and cancellation | Browser and HTTP contract tests; bindings retain domain validation and actual runtime ownership |
+| Application reports and export | Separate reports/queues views and full application snapshot export | Binding supplies captured evidence; a form or report panel alone does not prove engine execution |
 | Fresh scenario state and cleanup | Trusted `prepareScenario` / `cleanupScenario` lifecycle hooks | Example resets state; cleanup failures fail a run. Application-specific temporary rules belong in its adapter |
 | Queue health | Approximate visible/in-flight/delayed counts, retention, visibility, redrive, missing-DLQ/backlog warnings | Local SQS; oldest age explicitly unknown without CloudWatch; not called Flink backpressure |
 | Pause/resume output inspector | Await current poll, pause further reads, resume and drain | Unit test and real local SQS integration; inspector consumes/deletes test messages |
@@ -35,9 +37,9 @@ run that application's existing synthesized-infrastructure and delivery-handler 
 selects the relevant checks. A command exiting zero is insufficient: `successPattern`
 must match evidence that a positive number of relevant checks actually passed.
 
-The private lab's rule-specific tests and actual notification-handler tests have **not** been
-recreated as public StreamPlay business logic. Integrating that lab with this public module
-is a separate adapter change.
+Application-specific rule tests and notification-handler tests run through the binding's
+fixed controls. The public interface supports that integration without requiring those rules
+to be built into StreamPlay. See [application controls](APPLICATION-CONTROLS.md) for the contract.
 
 ## Work still outside parity
 

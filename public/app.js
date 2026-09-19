@@ -103,6 +103,7 @@ function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
   applicationControls?.update(snapshot);
+  applicationControls?.setDisabled(applicationPending);
   graph.update({ snapshot });
   $('application-status').textContent = snapshot.status;
   $('application-status').dataset.state = snapshot.status;
@@ -137,9 +138,9 @@ function initializeApplication(description) {
     button.dataset.action = action.id;
     button.dataset.allowBusy = String(Boolean(action.allowWhileBusy));
     button.onclick = async () => {
-      applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
       try {
         const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : action.input === 'controls' ? applicationControls.read() : undefined;
+        applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
         const result = await api('application', { action: action.id, value });
         $('application-message').textContent = result.message ?? 'Action complete.';
         if (result.configuration) $('application-config').value = pretty(result.configuration);

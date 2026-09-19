@@ -21,6 +21,7 @@ export function createApplicationControls(root, definitions = []) {
     controls.set(spec.id, { spec, input });
   }
   return {
+    setDisabled(disabled) { for (const { input } of controls.values()) input.disabled = disabled; },
     read() {
       return Object.fromEntries([...controls].flatMap(([id, { spec, input }]) => {
         if (input.value === '' && spec.optional) return [];

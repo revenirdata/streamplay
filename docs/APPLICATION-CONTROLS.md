@@ -29,7 +29,25 @@ const server = workbench({ dataDir: '.streamplay', application,
 server.listen(4317, '127.0.0.1');
 ```
 
-`description` may be a getter. Action input is omitted, `configuration`, or `input`; the latter two read their corresponding JSON editor. Optional result fields `configuration`, `input`, and `sample` update the editors after a successful action. The `sample` configuration option can be a function to provide the current application fixture on page reload.
+`description` may be a getter. Action input is omitted/`none`, `configuration`, `input`, or `controls`. The JSON options read their corresponding advanced editor; `controls` reads typed fields defined by the binding. Optional result fields `configuration`, `input`, `sample`, and `controls` update the corresponding editor or form after a successful action. The `sample` configuration option can be a function to provide the current application fixture on page reload.
+
+For example, add these definitions to `description.controls`:
+
+```js
+[
+  { id: 'deviceId', label: 'Source', type: 'select', optionsFrom: 'devices' },
+  { id: 'temperature', label: 'Temperature (°C)', type: 'number', value: 21,
+    min: -40, max: 120, step: 'any' },
+  { id: 'intervalMs', label: 'Interval (ms)', type: 'number', value: 1000,
+    min: 100, group: 'Emission settings' },
+]
+```
+
+Controls support number, text, and select fields, optional values, fixed `options`, and collapsible groups. `optionsFrom: 'devices'` takes IDs from `snapshot().devices`. Polling preserves edited fields and selection. Browser validation supplements the binding's required server-side validation. Do not place credentials in form definitions or snapshots.
+
+For a background operation, expose an `application.busy` getter until it finishes. Other actions and asserted scenarios are rejected while busy. A declared cancellation action may set `allowWhileBusy: true`; use `input: 'none'` so an unrelated invalid field cannot prevent cancellation. This exception applies to the binding's background operation, not a simultaneous HTTP action or StreamPlay scenario.
+
+Snapshots may include `configuration`, `state`, `queues`, and `reports`, exposed in the application inspector and evidence export. Keep live capture and history summaries bounded; save complete reports separately if needed. On embedding shutdown, call `server.cancelActiveRun()` before waiting for `server.close()`, then close application observers and runtime resources.
 
 The UI polls `GET /api/application` once per second and renders returned values as text. `POST /api/application` receives `{action, value}`. Actions serialize with each other and scenario execution. Snapshot reads remain available during startup and long actions. Existing localhost Host/Origin checks apply. The binding must validate its domain inputs, bound external calls, implement shutdown, and expose truthful failures. The server does not provide a sandbox for trusted binding code.
 
