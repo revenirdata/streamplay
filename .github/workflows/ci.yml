@@ -10,6 +10,21 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  mqtt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Start isolated MQTT broker
+        run: docker run -d --name streamplay-mqtt-test -p 127.0.0.1:18884:1883 -v "$PWD/examples/adapters/mosquitto-test.conf:/mosquitto/config/mosquitto.conf:ro" eclipse-mosquitto:2.0.22
+      - run: node scripts/mqtt-integration.js
+      - if: always()
+        run: docker rm -f streamplay-mqtt-test
   workbench:
     strategy:
       matrix:

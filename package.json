@@ -24,7 +24,8 @@
     "test:integration": "node scripts/integration.js"
   },
   "dependencies": {
-    "kafkajs": "2.2.4"
+    "kafkajs": "2.2.4",
+    "mqtt": "^5.15.2"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

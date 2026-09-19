@@ -9,11 +9,17 @@ export function validateScenario(value) {
   if (!Number.isInteger(value.observeMs) || value.observeMs < 100 || value.observeMs > 60_000) throw new Error('Observation window must be 100–60000 ms.');
   if (value.expected !== undefined && (!Array.isArray(value.expected) || value.expected.length > 1000)) throw new Error('Expected output must be an array of up to 1000 records.');
   if (value.scheduleMs !== undefined && (!Array.isArray(value.scheduleMs) || value.scheduleMs.length !== value.events.length || value.scheduleMs.some(n => !Number.isInteger(n) || n < 0) || value.scheduleMs.reduce((a, b) => a + b, 0) > 120_000)) throw new Error('scheduleMs must contain one nonnegative delay per event, totaling at most 120000 ms.');
+  if (value.timingMode !== undefined && !['relative', 'absolute'].includes(value.timingMode)) throw new Error('timingMode must be relative or absolute.');
+  if (value.tailMs !== undefined && (!Number.isInteger(value.tailMs) || value.tailMs < 0 || value.tailMs + (value.scheduleMs ?? []).reduce((a, b) => a + b, 0) > 120000)) throw new Error('Schedule plus tailMs must total at most 120000 ms.');
+  if (value.phaseNames !== undefined && (!Array.isArray(value.phaseNames) || value.phaseNames.length !== value.events.length || value.phaseNames.some(s => typeof s !== 'string' || !s.trim() || s.length > 60))) throw new Error('phaseNames must supply one name of 1–60 characters per event.');
   if (value.matchFields !== undefined && (!Array.isArray(value.matchFields) || !value.matchFields.length || value.matchFields.length > 20 || value.matchFields.some(s => typeof s !== 'string' || s.length > 120 || !/^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)*$/.test(s) || s.split('.').some(k => ['__proto__', 'constructor', 'prototype'].includes(k))))) throw new Error('matchFields must contain 1–20 ordinary dot-separated JSON field paths.');
   // Copy only the public scenario contract. Connection settings and commands are never accepted from the browser.
   return structuredClone({ version: 1, name: value.name.trim(), adapter: value.adapter, events: value.events,
     observeMs: value.observeMs, ...(value.expected === undefined ? {} : { expected: value.expected }),
     ...(value.scheduleMs === undefined ? {} : { scheduleMs: value.scheduleMs }),
+    ...(value.timingMode === undefined ? {} : { timingMode: value.timingMode }),
+    ...(value.tailMs === undefined ? {} : { tailMs: value.tailMs }),
+    ...(value.phaseNames === undefined ? {} : { phaseNames: value.phaseNames }),
     ...(value.matchFields === undefined ? {} : { matchFields: value.matchFields }) });
 }
 

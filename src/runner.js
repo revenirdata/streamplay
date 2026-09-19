@@ -5,6 +5,7 @@ import { assertOutputs, validateScenario } from './scenario.js';
 import { processAdapter } from './adapters/process.js';
 import { kafkaAdapter } from './adapters/kafka.js';
 import { topologyFor } from './topology.js';
+import { performance } from 'node:perf_hooks';
 
 export async function runScenario(input, { store, kafka, adapters = {}, onUpdate = () => {}, signal, topology } = {}) {
   const scenario = validateScenario(input);
@@ -42,18 +43,31 @@ export async function runScenario(input, { store, kafka, adapters = {}, onUpdate
     checkAbort();
     phase = 'sending'; update();
     if (scenario.scheduleMs) {
+      const start = performance.now();
+      let plannedMs = 0;
+      run.delivery = { timingMode: scenario.timingMode ?? 'relative', samples: [] };
       for (let i = 0; i < scenario.events.length; i++) {
-        await delay(scenario.scheduleMs[i], undefined, { signal });
+        plannedMs += scenario.scheduleMs[i];
+        await delay(scenario.timingMode === 'absolute' ? Math.max(0, plannedMs - (performance.now() - start)) : scenario.scheduleMs[i], undefined, { signal });
         checkAbort(); adapter.check();
+        const dispatchedMs = performance.now() - start;
         await adapter.send([scenario.events[i]], onSent);
+        run.delivery.samples.push({ index: i, phase: scenario.phaseNames?.[i] ?? null, plannedMs,
+          dispatchedMs, acknowledgedMs: performance.now() - start, latenessMs: Math.max(0, dispatchedMs - plannedMs) });
+      }
+      if (scenario.tailMs) {
+        phase = 'quiet'; update();
+        const remaining = scenario.timingMode === 'absolute' ? Math.max(0, plannedMs + scenario.tailMs - (performance.now() - start)) : scenario.tailMs;
+        await delay(remaining, undefined, { signal });
       }
     } else await adapter.send(scenario.events, onSent);
+    if (!scenario.scheduleMs && scenario.tailMs) { phase = 'quiet'; update(); await delay(scenario.tailMs, undefined, { signal }); }
     await adapter.finishInput?.();
     checkAbort();
     run.observation.startedAt = new Date().toISOString();
     phase = 'observing'; update();
     await delay(scenario.observeMs, undefined, { signal });
-    adapter.check();
+    adapter.check({ complete: true });
     if (overflow) throw new Error('Output exceeded 10000 records or 5 MB; capture is incomplete. Use a smaller isolated scenario.');
     run.observation.complete = true;
     if (scenario.expected !== undefined) {

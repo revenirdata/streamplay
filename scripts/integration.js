@@ -5,6 +5,7 @@ import { configuration } from '../src/config.js';
 import { runScenario } from '../src/runner.js';
 import { createStore } from '../src/store.js';
 import { flinkJobs } from './example.js';
+import { buildExperiment } from '../src/experiment.js';
 
 const config = configuration();
 const scenario = JSON.parse(await readFile('examples/scenarios/orders.kafka.json', 'utf8'));
@@ -31,3 +32,16 @@ const mismatch = await runScenario({ ...scenario, name: 'Detect an unexpected re
 assert.equal(mismatch.status, 'failed');
 assert.equal(mismatch.assertion.added.length, 1);
 console.log('Verified filtered output and a deliberately failing expectation against real Flink.');
+
+const generated = buildExperiment({ name: 'Two entities with silence and zero values', adapter: 'kafka', observeMs: 5000,
+  template: { order_id: 'template', quantity: 1, unit_price_cents: 100 }, deviceIds: ['sequence-a', 'sequence-b'],
+  deviceField: 'order_id', valueField: 'quantity', phases: [
+    { name: 'active', kind: 'emit', durationMs: 1000, intervalMs: 500, value: 2 },
+    { name: 'quiet', kind: 'silence', durationMs: 500 },
+    { name: 'zero', kind: 'emit', durationMs: 500, intervalMs: 500, value: 0 },
+  ], expected: [{order_id:'sequence-a',total_cents:200},{order_id:'sequence-b',total_cents:200},{order_id:'sequence-a',total_cents:200},{order_id:'sequence-b',total_cents:200}] });
+const generatedRun = await runScenario(generated, { kafka: config.kafka, topology, store: createStore(config.dataDir) });
+assert.equal(generatedRun.status, 'passed', generatedRun.error ?? JSON.stringify(generatedRun.assertion));
+assert.equal(generatedRun.inputs.length, 6);
+assert.equal(generatedRun.delivery.samples.length, 6);
+console.log('Verified generated multi-entity phased sequence against real Kafka and Flink.');

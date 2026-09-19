@@ -22,9 +22,10 @@ test('named Kafka topics, raw process evidence, saved topology and accessible in
   await page.locator('.pipeline').screenshot({ path: 'test-results/kafka-topics.png' });
   await page.getByRole('button', { name: 'Load example', exact: true }).click();
   await expect(page.locator('.graph-node[data-kind="topic"]')).toHaveCount(0);
-  await page.locator('#window').fill('1000');
+  // This test checks graph evidence, not process startup latency on a busy Windows host.
+  await page.locator('#window').fill('3000');
   await page.getByRole('button', { name: 'Run scenario' }).click();
-  await expect(page.locator('#status')).toHaveText('observed');
+  await expect(page.locator('#status')).toHaveText('observed', { timeout: 10000 });
   await expect(page.locator('#graph-status')).toHaveText('Saved run · snapshot');
   await page.getByRole('button', { name: 'OUTPUT: Standard output', exact: true }).click();
   await expect(page.locator('.graph-record')).toHaveCount(2);

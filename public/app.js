@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createPipelineGraph } from './graph.js';
+import { buildExperiment } from './experiment.js';
+import { validateScenario } from './scenario.js';
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
 let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
 let lastApplicationConfiguration;
+let phaseNames;
 const pretty = value => JSON.stringify(value, null, 2);
 async function api(path, value) {
   const response = await fetch(`/api/${path}`, value === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
@@ -16,7 +19,7 @@ function message(text) { $('message').textContent = text; }
 function scenario() {
   const expected = $('expected').value.trim();
   const schedule = $('schedule').value.trim(), fields = $('fields').value.trim();
-  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}) };
+  return { version: 1, name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value), events: JSON.parse($('events').value), ...(expected ? { expected: JSON.parse(expected) } : {}), ...(schedule ? { scheduleMs: JSON.parse(schedule) } : {}), ...(fields ? { matchFields: fields.split(',').map(s => s.trim()) } : {}), timingMode: $('timing-mode').value, tailMs: Number($('tail').value), ...(phaseNames ? { phaseNames } : {}) };
 }
 function connection() {
   $('connection').textContent = $('adapter').value === 'process'
@@ -28,12 +31,13 @@ function fill(value) {
   $('name').value = value.name; $('adapter').value = value.adapter; $('window').value = value.observeMs;
   $('events').value = pretty(value.events); $('expected').value = value.expected === undefined ? '' : pretty(value.expected); connection();
   $('schedule').value = value.scheduleMs ? pretty(value.scheduleMs) : ''; $('fields').value = value.matchFields?.join(', ') ?? '';
+  $('timing-mode').value = value.timingMode ?? 'relative'; $('tail').value = value.tailMs ?? 0; phaseNames = value.phaseNames;
 }
 function pre(value) { const el = document.createElement('pre'); el.textContent = value; return el; }
 function showRecords() {
   if (!current) return;
   const root = $('record-list'); root.replaceChildren();
-  if (tab === 'metadata') { root.append(pre(pretty({ id: current.id, startedAt: current.startedAt, finishedAt: current.finishedAt, environment: current.environment, observation: current.observation, error: current.error }))); return; }
+  if (tab === 'metadata') { root.append(pre(pretty({ id: current.id, startedAt: current.startedAt, finishedAt: current.finishedAt, environment: current.environment, observation: current.observation, delivery: current.delivery, error: current.error }))); return; }
   if (tab === 'logs') { root.append(pre(current.logs.join('\n') || 'No process or adapter logs captured. Kafka mode does not yet collect application logs.')); return; }
   const values = current[tab];
   if (!values.length) { root.append(pre('No records captured in this run.')); return; }
@@ -68,6 +72,23 @@ async function refresh() {
   options('saved', scenarios, 'Choose a saved scenario', s => s.scenario.name);
 }
 function safe(fn) { return async () => { try { await fn(); } catch (error) { message(error.message); } }; }
+$('sequence-build').onclick = safe(() => {
+  const value = buildExperiment({ name: $('name').value, adapter: $('adapter').value, observeMs: Number($('window').value),
+    template: JSON.parse($('events').value)[0], deviceIds: $('sequence-devices').value.split(',').map(s => s.trim()),
+    deviceField: $('sequence-identity').value, valueField: $('sequence-value').value, phases: JSON.parse($('sequence-phases').value) });
+  fill(value); graph.preview(value.adapter);
+  message(`Generated ${value.events.length} events. Inspect the JSON and add expected outputs to make this a test; no result is assumed.`);
+});
+$('events').addEventListener('input', () => { phaseNames = undefined; });
+$('schedule').addEventListener('input', () => { phaseNames = undefined; });
+$('import-scenario').onchange = safe(async () => {
+  const file = $('import-scenario').files[0]; if (!file) return;
+  if (file.size > 1000000) throw new Error('Import must fit within 1 MB.');
+  const value = JSON.parse(await file.text());
+  const scenario = validateScenario(value.scenario ?? value);
+  fill(scenario); graph.preview(scenario.adapter);
+  message('Settings imported. Review the adapter and expected output, then run. No connection settings or executable commands were imported.');
+});
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
