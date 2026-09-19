@@ -34,13 +34,14 @@ export async function runFlinkRecovery({ directory, onUpdate = () => {}, signal 
   const inputTopic = `recovery-in-${suffix}`, outputTopic = `recovery-out-${suffix}`;
   const report = { id, status: 'running', phase: 'starting', startedAt: new Date().toISOString(), inputs: [], outputs: [], publications: [], logs: [], checks: [], state: {}, topics: { inputTopic, outputTopic },
     scope: 'Real Flink 1.20.2 worker loss with JobManager and Kafka retained. Independent Kafka readers expose input/output JSON. Aggregate outputs are updates, not one receipt per input. This does not certify Bluebot, Managed Flink, JobManager loss, EFO or exactly-once external delivery.' };
-  let jobId, readerError, workerStopped = false, cancelled = false;
+  let jobId, readerError, readerReady = false, workerStopped = false, cancelled = false;
   const notify = () => onUpdate(structuredClone(report));
   const phase = message => { report.phase = message; report.logs.push(`${new Date().toISOString()} ${message}`); notify(); };
-  const kafka = new Kafka({ clientId: jobName, brokers: ['127.0.0.1:19092'], logLevel: logLevel.ERROR, retry: { retries: 3 } });
+  const kafka = new Kafka({ clientId: jobName, brokers: ['127.0.0.1:19092'], logLevel: logLevel.ERROR, retry: { retries: 8, initialRetryTime: 200, maxRetryTime: 2000 } });
   const admin = kafka.admin(), producer = kafka.producer(), reader = kafka.consumer({ groupId: `observer-${suffix}` });
   const latest = new Map();
-  reader.on(reader.events.CRASH, ({ payload }) => { readerError = payload.error; });
+  reader.on(reader.events.GROUP_JOIN, () => { readerReady = true; });
+  reader.on(reader.events.CRASH, ({ payload }) => { readerReady = false; if (!payload.restart) readerError = payload.error; report.logs.push(`Kafka observer: ${payload.error.message}; restart scheduled: ${payload.restart}`); notify(); });
   async function until(check, label, timeout = 60000) {
     const end = Date.now() + timeout;
     while (Date.now() < end) { signal?.throwIfAborted(); if (readerError) throw readerError; const value = await check(); if (value) return value; await delay(250, undefined, { signal }); }
@@ -68,6 +69,7 @@ export async function runFlinkRecovery({ directory, onUpdate = () => {}, signal 
       if (report.inputs.length + report.outputs.length > 1000) throw new Error('Recovery capture limit exceeded');
       notify();
     } });
+    await until(() => readerReady, 'Kafka observer group assignment');
     await until(async () => (await rest('/overview'))['slots-available'] > 0, 'Flink slots');
     const sql = (await readFile('examples/kafka-flink/recovery.sql', 'utf8')).replaceAll('__JOB__', jobName).replaceAll('__INPUT__', inputTopic).replaceAll('__OUTPUT__', outputTopic);
     const sqlPath = resolve(directory, `${id}.sql`); await writeFile(sqlPath, sql, { flag: 'wx' });

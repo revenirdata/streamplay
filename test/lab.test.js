@@ -15,7 +15,7 @@ import { thresholdPhases } from '../src/experiment.js';
 import sensor from '../examples/lab/in-process.js';
 
 const temporary = () => mkdtemp(join(tmpdir(), 'streamplay-parity-'));
-const until = async fn => { for (let i = 0; i < 200; i++) { if (await fn()) return; await delay(10); } throw new Error('Condition timed out'); };
+const until = async fn => { const deadline = Date.now() + 10000; while (Date.now() < deadline) { if (await fn()) return; await delay(10); } throw new Error('Condition timed out'); };
 test('ledger excludes simultaneous writers and survives restart without rewinding', async () => {
   const dir = await temporary(); let ledger;
   try {
@@ -32,14 +32,15 @@ test('independent devices stop independently; target quantity survives delayed p
   const fleet = createFleet({ namespace: 'test', ledger, publish: async event => { await delay(30); frames.push(event); return 'accepted'; } });
   try {
     fleet.add({ id: 'a', rate: 60, intervalMs: 50 }); fleet.add({ id: 'b', rate: 1, intervalMs: 50 });
-    fleet.start('b', 1500);
+    // Independence is the contract; a busy host must not expire B's session before A finishes.
+    fleet.start('b', 60000);
     fleet.episode({ id: 'a', baselineMs: 50, stopMs: 50, targetQuantity: 0.2 });
     await until(() => !fleet.snapshot()[0].active);
     assert.equal(fleet.snapshot()[0].report.status, 'published');
     assert.ok(Math.abs(ledger.get('test:a') - 0.2) < 1e-9);
     assert.equal(fleet.snapshot()[1].active, true);
     const before = frames.filter(f => f.device_id === 'b').length;
-    await delay(100); assert.ok(frames.filter(f => f.device_id === 'b').length > before);
+    await until(() => frames.filter(f => f.device_id === 'b').length > before);
     await fleet.stop('b'); const stopped = frames.length; await delay(80); assert.equal(frames.length, stopped);
     assert.ok(frames.filter(f => f.device_id === 'a' && f.value === 0).length >= 2);
     assert.throws(() => fleet.episode({ id: 'a', rawRate: 0, targetQuantity: 1 }), /positive/);

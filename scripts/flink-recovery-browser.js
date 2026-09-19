@@ -18,7 +18,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1100 } }); const errors = [];
   page.on('pageerror', error => errors.push(error.message)); await page.goto(base);
   await page.getByRole('button', { name: 'Run worker recovery experiment', exact: true }).click();
-  await until(async () => (await (await fetch(base + '/api/application')).json()).inputs.length >= 3, 'Baseline inputs');
+  await until(async () => { const value = await (await fetch(base + '/api/application')).json(); if (value.reports?.status === 'failed') throw new Error(value.reports.error); return value.inputs.length >= 3; }, 'Baseline inputs');
   await page.locator('[data-graph-node="input"]').click();
   await until(async () => (await page.locator('#graph-inspector-body').textContent()).includes('event_id'), 'Visible input JSON');
   await page.locator('#graph-inspector-body').getByText('Transport metadata', { exact: true }).first().click();
