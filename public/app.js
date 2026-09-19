@@ -130,6 +130,11 @@ async function refreshApplication() {
 }
 function initializeApplication(description) {
   if (!description) return;
+  if (description.view === 'recovery') {
+    for (const element of document.querySelectorAll('.workspace, .history, #application-advanced, #delivery-audit')) element.hidden = true;
+    document.querySelector('h1').textContent = 'Watch Flink recover.';
+    document.querySelector('.intro .sub').textContent = 'Inspect real input JSON, checkpoint restoration, and output after a worker interruption.';
+  }
   if (description.view === 'delivery') {
     for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export')) element.hidden = true;
     document.querySelector('h1').textContent = 'Account for every event.';

@@ -17,6 +17,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "lab": "node scripts/lab.js",
+    "lab:recovery": "node scripts/flink-recovery-demo.js",
+    "test:recovery": "node scripts/flink-recovery.js",
     "test": "node --test test/*.test.js",
     "check": "node scripts/check.js",
     "run:scenario": "node src/cli.js",

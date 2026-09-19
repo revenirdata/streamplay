@@ -10,6 +10,27 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  flink-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install chromium --with-deps
+      - name: Inspect actual input, kill worker, verify checkpoint restore and output
+        run: node scripts/flink-recovery-browser.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flink-worker-recovery-evidence
+          path: .streamplay/evidence/flink-recovery/
+          include-hidden-files: true
+      - if: always()
+        run: docker compose -p streamplay-recovery -f examples/kafka-flink/compose.yaml -f examples/kafka-flink/recovery.compose.yaml down --volumes --remove-orphans
   mqtt:
     runs-on: ubuntu-latest
     timeout-minutes: 5

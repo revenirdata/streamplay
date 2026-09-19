@@ -185,3 +185,8 @@ npx playwright test
 ```
 
 **Creator and lead maintainer:** [Carl Salazar (@kc-salazar)](https://github.com/kc-salazar). **Project home:** [Revenir](https://github.com/revenirdata). [Maintainer model](MAINTAINERS.md) · [Apache-2.0 license](LICENSE).
+## Inspect Flink recovery
+
+Run `npm run lab:recovery` to inspect actual Kafka input/output JSON while a dedicated
+stateful Flink worker is killed and restored from a checkpoint. The experiment checks
+saved state and buffered inputs, and exports its evidence. [Setup and exact boundaries](docs/FLINK-RECOVERY.md).
