@@ -14,14 +14,16 @@
 <section id="application" class="panel application" hidden>
 <div class="panel-title"><h2>Application <span id="application-name"></span></h2><span id="application-status" class="status">Connecting</span></div>
 <p id="application-detail" class="hint"></p>
+<div id="application-controls"></div>
 <div id="application-actions" class="actions"></div>
 <p id="application-message" role="status" aria-live="polite"></p>
-<div class="application-grid">
+<details id="application-advanced" open><summary>Advanced application JSON</summary><div class="application-grid">
 <div><label for="application-config">Application configuration <span>JSON</span></label><textarea id="application-config" rows="7" spellcheck="false"></textarea><p class="hint">Edit, then apply using the application control above. Changes affect the local application. Clearing the view does not reset its state.</p></div>
 <div><label for="application-input">Action input <span>JSON</span></label><textarea id="application-input" rows="7" spellcheck="false"></textarea><p class="hint">Used by application controls that accept input. Scenario runs use the event editor below.</p></div>
-</div>
-<div class="tabs" role="tablist" aria-label="Application details"><button role="tab" aria-selected="true" data-application-tab="outputs">Live outputs</button><button role="tab" aria-selected="false" data-application-tab="inputs">Live inputs</button><button role="tab" aria-selected="false" data-application-tab="logs">Application logs</button><button role="tab" aria-selected="false" data-application-tab="state">Application state</button></div>
+</div></details>
+<div class="tabs" role="tablist" aria-label="Application details"><button role="tab" aria-selected="true" data-application-tab="outputs">Live outputs</button><button role="tab" aria-selected="false" data-application-tab="inputs">Live inputs</button><button role="tab" aria-selected="false" data-application-tab="logs">Application logs</button><button role="tab" aria-selected="false" data-application-tab="state">Application state</button><button role="tab" aria-selected="false" data-application-tab="reports">Reports</button><button role="tab" aria-selected="false" data-application-tab="queues">Queues</button></div>
 <pre id="application-records" class="application-records" role="tabpanel"></pre>
+<button id="application-export">Export application evidence</button>
 </section>
 <section id="lab" class="panel application" hidden>
 <div class="panel-title"><h2>Live sources <span id="lab-name"></span></h2><span id="lab-status" class="status">Connecting</span></div>

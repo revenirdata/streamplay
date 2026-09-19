@@ -3,11 +3,13 @@ import { createPipelineGraph } from './graph.js';
 import { buildExperiment, thresholdPhases } from './experiment.js';
 import { validateScenario } from './scenario.js';
 import { initializeLab } from './lab.js';
+import { createApplicationControls } from './application-controls.js';
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
 let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
 let lastApplicationConfiguration;
+let applicationControls;
 let phaseNames;
 let phaseExpectations;
 const pretty = value => JSON.stringify(value, null, 2);
@@ -100,13 +102,14 @@ $('import-scenario').onchange = safe(async () => {
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
+  applicationControls?.update(snapshot);
   graph.update({ snapshot });
   $('application-status').textContent = snapshot.status;
   $('application-status').dataset.state = snapshot.status;
   $('application-detail').textContent = snapshot.detail ?? '';
   const value = snapshot[applicationTab];
   $('application-records').textContent = applicationTab === 'logs' ? (value ?? []).join('\n') : pretty(value ?? []);
-  for (const button of $('application-actions').querySelectorAll('button')) button.disabled = applicationPending || Boolean(snapshot.busy) || snapshot.runningScenario;
+  for (const button of $('application-actions').querySelectorAll('button')) button.disabled = applicationPending || (Boolean(snapshot.busy) && button.dataset.allowBusy !== 'true') || snapshot.runningScenario;
 }
 async function refreshApplication() {
   applicationSnapshot = await api('application');
@@ -124,21 +127,25 @@ async function refreshApplication() {
 function initializeApplication(description) {
   if (!description) return;
   $('application').hidden = false; $('application-name').textContent = description.name;
+  applicationControls = createApplicationControls($('application-controls'), description.controls);
+  $('application-advanced').open = !description.controls?.length;
   $('application-config').value = pretty(description.configuration ?? {});
   lastApplicationConfiguration = $('application-config').value;
   $('application-input').value = pretty(description.input ?? []);
   for (const action of description.actions) {
     const button = document.createElement('button'); button.textContent = action.label;
     button.dataset.action = action.id;
+    button.dataset.allowBusy = String(Boolean(action.allowWhileBusy));
     button.onclick = async () => {
       applicationPending = true; showApplication(); $('application-message').textContent = `${action.label}…`;
       try {
-        const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : undefined;
+        const value = action.input === 'configuration' ? JSON.parse($('application-config').value) : action.input === 'input' ? JSON.parse($('application-input').value) : action.input === 'controls' ? applicationControls.read() : undefined;
         const result = await api('application', { action: action.id, value });
         $('application-message').textContent = result.message ?? 'Action complete.';
         if (result.configuration) $('application-config').value = pretty(result.configuration);
         if (result.input) $('application-input').value = pretty(result.input);
         if (result.sample) fill(result.sample);
+        if (result.controls) applicationControls.fill(result.controls);
         await refreshApplication();
       } catch (error) { $('application-message').textContent = error.message; }
       finally { applicationPending = false; showApplication(); }
@@ -158,6 +165,10 @@ function initializeApplication(description) {
     finally { polling = false; }
   };
   void poll(); setInterval(poll, 1000);
+  $('application-export').onclick = () => {
+    const url = URL.createObjectURL(new Blob([pretty(applicationSnapshot)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'streamplay-application-evidence.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
 }
 $('run').onclick = safe(async () => {
   const value = scenario(); $('run').disabled = true; $('status').textContent = 'Running'; $('status').dataset.state = 'running';

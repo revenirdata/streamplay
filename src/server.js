@@ -16,6 +16,7 @@ assets['/experiment.js'] = ['../src/experiment.js', 'text/javascript'];
 assets['/scenario.js'] = ['../src/scenario.js', 'text/javascript'];
 assets['/source-profile.js'] = ['../src/source-profile.js', 'text/javascript'];
 assets['/lab.js'] = ['lab.js', 'text/javascript'];
+assets['/application-controls.js'] = ['application-controls.js', 'text/javascript'];
 const sample = JSON.parse(await readFile(new URL('../examples/scenarios/orders.process.json', import.meta.url), 'utf8'));
 
 export function workbench(config = configuration(), adapters = {}) {
@@ -43,7 +44,7 @@ export function workbench(config = configuration(), adapters = {}) {
       }
       if (req.method === 'GET' && url.pathname === '/api/config') return send(200, { sample: (typeof config.sample === 'function' ? config.sample() : config.sample) ?? sample, kafka: config.kafka, topology, localAdapter: Boolean(adapters.local), application: application?.description ?? null, lab: lab?.description ?? null, active: active ? { id: active.id, phase: active.phase } : null });
       if (req.method === 'GET' && url.pathname === '/api/lab') return lab ? send(200, await lab.snapshot()) : send(404, { error: 'No lab module configured at startup.' });
-      if (req.method === 'GET' && url.pathname === '/api/application') return application ? send(200, { ...await application.snapshot(), busy: applicationAction, runningScenario: Boolean(active) }) : send(404, { error: 'No application configured.' });
+      if (req.method === 'GET' && url.pathname === '/api/application') return application ? send(200, { ...await application.snapshot(), busy: applicationAction ?? application.busy ?? null, runningScenario: Boolean(active) }) : send(404, { error: 'No application configured.' });
       if (req.method === 'GET' && url.pathname === '/api/active') return send(200, active);
       if (req.method === 'GET' && url.pathname === '/api/runs') return send(200, await store.list('runs'));
       if (req.method === 'GET' && url.pathname === '/api/scenarios') return send(200, await store.list('scenarios'));
@@ -71,6 +72,7 @@ export function workbench(config = configuration(), adapters = {}) {
         if (!application) return send(404, { error: 'No application configured.' });
         if (active || applicationAction || lab?.active || lab?.busy) return send(409, { error: 'Wait for the current run, fleet or application action to finish.' });
         if (!application.description.actions.some(action => action.id === body?.action)) return send(400, { error: 'Unknown application action.' });
+        if (application.busy && !application.description.actions.find(action => action.id === body.action).allowWhileBusy) return send(409, { error: 'The application has an active operation.' });
         applicationAction = body.action;
         try { return send(200, await application.act(body.action, body.value)); }
         finally { applicationAction = null; }
@@ -80,7 +82,7 @@ export function workbench(config = configuration(), adapters = {}) {
         const id = await store.save('scenarios', { scenario, savedAt: new Date().toISOString() });
         return send(201, { id });
       }
-      if (active || applicationAction || lab?.active || lab?.busy) return send(409, { error: 'A run, fleet or application action is already active. Stop live devices before an asserted scenario.' });
+      if (active || applicationAction || application?.busy || lab?.active || lab?.busy) return send(409, { error: 'A run, fleet or application action is already active. Stop live devices before an asserted scenario.' });
       active = { phase: 'connecting' };
       controller = new AbortController();
       try {
