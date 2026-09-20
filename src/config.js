@@ -7,6 +7,7 @@ export function configuration(env = process.env) {
     dataDir: resolve(env.STREAMPLAY_DATA_DIR ?? '.streamplay'),
     adapterModule: env.STREAMPLAY_ADAPTER_MODULE ? resolve(env.STREAMPLAY_ADAPTER_MODULE) : null,
     topologyFile: env.STREAMPLAY_TOPOLOGY_FILE ? resolve(env.STREAMPLAY_TOPOLOGY_FILE) : null,
+    labModule: env.STREAMPLAY_LAB_MODULE ? resolve(env.STREAMPLAY_LAB_MODULE) : null,
     kafka: {
       brokers: (env.STREAMPLAY_KAFKA_BROKERS ?? 'localhost:19092').split(',').map(s => s.trim()),
       inputTopic: env.STREAMPLAY_INPUT_TOPIC ?? 'streamplay-orders-in',

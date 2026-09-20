@@ -16,15 +16,22 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "lab": "node scripts/lab.js",
+    "lab:recovery": "node scripts/flink-recovery-demo.js",
+    "test:recovery": "node scripts/flink-recovery.js",
     "test": "node --test test/*.test.js",
     "check": "node scripts/check.js",
     "run:scenario": "node src/cli.js",
+    "run:suite": "node src/suite-cli.js",
     "example:up": "node scripts/example.js up",
     "example:down": "node scripts/example.js down",
     "test:integration": "node scripts/integration.js"
   },
   "dependencies": {
-    "kafkajs": "2.2.4"
+    "@aws-sdk/client-kinesis": "^3.1136.0",
+    "@aws-sdk/client-sqs": "^3.1136.0",
+    "kafkajs": "2.2.4",
+    "mqtt": "^5.15.2"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

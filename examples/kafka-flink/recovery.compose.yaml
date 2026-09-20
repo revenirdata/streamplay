@@ -1,0 +1,29 @@
+# Bounded local experiment. Separate Compose project; no production configuration.
+services:
+  kafka:
+    mem_limit: 768m
+    environment:
+      KAFKA_HEAP_OPTS: '-Xms256m -Xmx384m'
+  jobmanager:
+    mem_limit: 1g
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        rest.address: jobmanager
+        rest.bind-address: 0.0.0.0
+        parallelism.default: 1
+        jobmanager.memory.process.size: 768m
+        heartbeat.interval: 1000
+        heartbeat.timeout: 10000
+  taskmanager:
+    mem_limit: 1280m
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        parallelism.default: 1
+        taskmanager.memory.process.size: 1024m
+        heartbeat.interval: 1000
+        heartbeat.timeout: 10000
+  sql-client:
+    mem_limit: 768m

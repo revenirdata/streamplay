@@ -12,6 +12,12 @@ export function createPipelineGraph() {
   const viewport = $('graph-viewport'), canvas = $('graph-canvas'), stage = $('graph-stage');
   let context = {}, selected, selectedView = 'records', structure = '', layout, nodes = new Map(), paths = [], previous = new Map(), inspectorKey;
   let evidence = graphEvidence('preview'), mode = 'preview', zoom = 1, autoFit = true, lastIdentity;
+  let frozen;
+  const pause = element('button', '', 'Pause view'); pause.type = 'button'; pause.setAttribute('aria-pressed', 'false');
+  pause.title = 'Freeze this graph and its JSON inspector. Background capture continues.';
+  document.querySelector('.graph-zoom-controls').before(pause);
+  const resume = () => { frozen = undefined; pause.textContent = 'Pause view'; pause.setAttribute('aria-pressed', 'false'); };
+  pause.onclick = () => { if (frozen) resume(); else { frozen = structuredClone(context); pause.textContent = 'Resume view'; pause.setAttribute('aria-pressed', 'true'); } render(); };
   const scale = () => {
     if (!layout) return;
     if (autoFit) zoom = Math.max(.25, Math.min(1, (viewport.clientWidth - 24) / layout.width, (viewport.clientHeight - 48) / layout.height));
@@ -22,7 +28,7 @@ export function createPipelineGraph() {
   new ResizeObserver(scale).observe(viewport);
   $('graph-fit').onclick = () => { autoFit = true; scale(); viewport.scrollTo(0, 0); };
   for (const [id, delta] of [['graph-in', .15], ['graph-out', -.15]]) $(id).onclick = () => { autoFit = false; zoom = Math.max(.25, Math.min(1.6, zoom + delta)); scale(); };
-  $('graph-mode').onchange = () => { mode = $('graph-mode').value; previous.clear(); render(); };
+  $('graph-mode').onchange = () => { resume(); mode = $('graph-mode').value; previous.clear(); render(); };
   $('graph-search').oninput = () => filter();
   function filter() {
     const query = $('graph-search').value.trim().toLowerCase();
@@ -49,6 +55,8 @@ export function createPipelineGraph() {
     if (key === inspectorKey) return;
     inspectorKey = key;
     const focusedTab = $('graph-inspector-tabs').contains(document.activeElement);
+    const expanded = new Set([...root.querySelectorAll('details[open][data-record-key]')].map(detail => detail.dataset.recordKey));
+    const scrollTop = root.scrollTop;
     root.replaceChildren(); $('graph-inspector-tabs').replaceChildren();
     $('graph-inspector-kind').textContent = labels[node.kind];
     $('graph-inspector-title').textContent = node.label;
@@ -71,31 +79,35 @@ export function createPipelineGraph() {
       root.append(element('p', 'graph-inspector-count', `${records.length} captured · showing latest ${Math.min(records.length, 25)}`));
       if (!records.length) root.append(element('p', 'hint', 'No records captured here in this view. Send inputs or select a saved run.'));
       for (const record of records.slice(-25).reverse()) {
+        const recordKey = JSON.stringify([node.id, record.topic, record.partition, record.offset, record.observedAt, record.raw]);
         const card = element('article', 'graph-record');
         card.append(element('div', 'graph-record-time', record.observedAt ?? 'Observation time unavailable'), element('pre', '', record.json ? pretty(record.value) : record.raw ?? pretty(record.value ?? record)));
         const details = element('details', ''), summary = element('summary', '', 'Transport metadata');
+        details.dataset.recordKey = recordKey + ':metadata'; details.open = expanded.has(details.dataset.recordKey);
         const { raw, value, ...metadata } = record;
         details.append(summary, element('pre', '', pretty(metadata))); card.append(details);
-        if (record.raw !== undefined) { const rawDetails = element('details', ''); rawDetails.append(element('summary', '', 'Exact raw payload'), element('pre', '', record.raw)); card.append(rawDetails); }
+        if (record.raw !== undefined) { const rawDetails = element('details', ''); rawDetails.dataset.recordKey = recordKey + ':raw'; rawDetails.open = expanded.has(rawDetails.dataset.recordKey); rawDetails.append(element('summary', '', 'Exact raw payload'), element('pre', '', record.raw)); card.append(rawDetails); }
         root.append(card);
       }
     } else {
       root.append(element('pre', '', typeof value === 'string' ? value : pretty(value)));
     }
+    root.scrollTop = scrollTop;
     if (focusedTab) $('graph-inspector-tabs').querySelector('[aria-selected="true"]').focus({ preventScroll: true });
   }
   function render() {
     if (!context.config) return;
-    const { config, run, snapshot, adapter } = context;
+    const { config, run, snapshot, adapter } = frozen ?? context;
     if (mode === 'run' && !run) mode = 'preview';
-    if (mode === 'application' && !config.application) mode = 'preview';
+    if (mode === 'application' && !config.application && !config.lab) mode = 'preview';
     $('graph-mode').value = mode;
     $('graph-mode').querySelector('[value="run"]').disabled = !run;
-    $('graph-mode').querySelector('[value="application"]').disabled = !config.application;
+    $('graph-mode').querySelector('[value="application"]').disabled = !config.application && !config.lab;
     evidence = graphEvidence(mode, run, snapshot);
+    if (frozen) evidence = { ...evidence, live: false, label: 'Paused view · background capture continues' };
     const graphAdapter = mode === 'run' ? run.scenario.adapter : mode === 'application' ? 'local' : adapter ?? config.sample.adapter;
     let base;
-    try { base = mode === 'run' ? (run.topology ? validateTopology(run.topology) : topologyFor(graphAdapter)) : topologyFor(graphAdapter, config.topology, config.kafka); }
+    try { base = mode === 'run' ? (run.topology ? validateTopology(run.topology) : topologyFor(graphAdapter)) : topologyFor(graphAdapter, mode === 'application' ? snapshot?.topology ?? config.topology : config.topology, config.kafka); }
     catch (error) { $('graph-status').textContent = `Topology unavailable: ${error.message}`; canvas.replaceChildren(); nodes.clear(); $('graph-inspector-body').replaceChildren(); structure = ''; return; }
     const graph = expandSources(base, evidence.inputs);
     const key = JSON.stringify(graph);
@@ -133,7 +145,7 @@ export function createPipelineGraph() {
       if (!nodes.has(selected)) selected = layout.nodes.find(n => n.kind === 'processor')?.id ?? layout.nodes[0].id;
       select(selected); if (focused) nodes.get(focused)?.button.focus(); scale(); filter();
     }
-    for (const { node, count } of nodes.values()) count.textContent = node.observe === 'none' ? (node.kind === 'configuration' ? 'Inspect configuration' : 'Inspect logs & context') : `${recordsForNode(node, evidence).length} ${node.observe === 'inputs' ? 'acknowledged' : 'observed'}`;
+    for (const { node, count } of nodes.values()) count.textContent = node.observe === 'none' ? (node.kind === 'configuration' ? 'Inspect configuration' : 'Inspect logs & context') : `${recordsForNode(node, evidence).length} captured`;
     for (const { edge, path, from, to } of paths) {
       const boundary = from.observe === edge.observe ? from : to;
       const records = edge.observe === 'none' ? [] : recordsForNode(boundary, evidence);
@@ -147,8 +159,8 @@ export function createPipelineGraph() {
     inspect();
   }
   return {
-    update(next) { const first = !context.config; context = { ...context, ...next }; if (first && next.config?.application) mode = 'application'; render(); },
-    showRun(run) { context.run = run; mode = 'run'; render(); },
-    preview(adapter) { context.adapter = adapter; mode = 'preview'; render(); }
+    update(next) { const first = !context.config; context = { ...context, ...next }; if (first && (next.config?.application || next.config?.lab)) mode = 'application'; render(); },
+    showRun(run) { resume(); context.run = run; mode = 'run'; render(); },
+    preview(adapter) { resume(); context.adapter = adapter; mode = 'preview'; render(); }
   };
 }

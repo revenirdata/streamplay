@@ -33,3 +33,35 @@ test('application panel preserves draft configuration and displays trusted contr
   await page.setViewportSize({ width: 390, height: 900 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('typed adapter controls retain edits across polling and leave cancellation available', async ({ page }) => {
+  let received, busy = null, release;
+  const responseGate = new Promise(resolve => { release = resolve; });
+  await page.route('**/api/config', async route => {
+    const response = await route.fetch(); const body = await response.json();
+    await route.fulfill({ json: { ...body, application: { name: 'Typed test adapter', controls: [
+      { id: 'deviceId', label: 'Device', type: 'select', optionsFrom: 'devices' },
+      { id: 'value', label: 'Measured value', type: 'number', value: 4, min: 0, max: 100 }
+    ], actions: [{ id: 'send', label: 'Send measured event', input: 'controls' }, { id: 'cancel', label: 'Cancel operation', allowWhileBusy: true }] } } });
+  });
+  await page.route('**/api/application', async route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: { status: 'ready', busy, devices: [{ id: 'sensor-a' }, { id: 'sensor-b' }], reports: { passed: true } } });
+    received = route.request().postDataJSON(); await responseGate;
+    return route.fulfill({ json: { message: 'Accepted' } });
+  });
+  await page.goto('/');
+  await page.getByLabel('Device', { exact: true }).selectOption('sensor-b');
+  await page.getByLabel('Measured value', { exact: true }).fill('7');
+  await page.waitForTimeout(1100);
+  await page.getByRole('button', { name: 'Send measured event', exact: true }).click();
+  await expect(page.getByLabel('Device', { exact: true })).toBeDisabled();
+  await expect(page.getByLabel('Measured value', { exact: true })).toBeDisabled();
+  release();
+  await expect(page.getByLabel('Device', { exact: true })).toBeEnabled();
+  expect(received.value).toEqual({ deviceId: 'sensor-b', value: 7 });
+  busy = 'test';
+  await expect(page.getByRole('button', { name: 'Send measured event', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Cancel operation', exact: true })).toBeEnabled();
+  const downloaded = page.waitForEvent('download'); await page.getByRole('button', { name: 'Export application evidence' }).click();
+  expect((await downloaded).suggestedFilename()).toBe('streamplay-application-evidence.json');
+});
