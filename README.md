@@ -1,29 +1,23 @@
 # StreamPlay
 
-Live-source lab: `npm run lab`. Choose a source preset or use your own JSON template, add independent
-sources, inspect their events and save evidence. Meter totals are an optional profile; StreamPlay also
-supports ordinary application events and sensor measurements. See [setup and transports](docs/LIVE-SOURCES.md)
-and the [local-lab capability inventory](docs/LAB-PARITY.md). The default lab is a JavaScript example;
-`npm run lab -- --example kafka-flink` starts the real Kafka/Flink example.
-
-**A local workbench for streaming development.**
+**An open-source local workbench for developing and testing streaming applications.**
 
 [![CI](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml/badge.svg)](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-**Open source · Early prototype · Not an MVP or a release yet**
+Send controlled events through real processing code, inspect the raw inputs and outputs, and save useful experiments as regression tests. Keep your application in your editor; use StreamPlay to see and test its behavior.
 
-Created by **[Carl Salazar (@kc-salazar)](https://github.com/kc-salazar)**. An open-source project by **[Revenir](https://www.revenirdata.com/streamplay)**.
+**Input → real processing logic → output → validation.**
 
-Changing a streaming transformation often means juggling an editor, a producer, a consumer, logs, and yesterday's fixtures. StreamPlay brings the **edit → run → inspect → repeat** loop into one local workspace. Keep your application code in your editor. Send JSON events through it, inspect actual records, and retain the useful runs.
+Created and maintained by **[Carl Salazar (@kc-salazar)](https://github.com/kc-salazar)** at **[Revenir](https://www.revenirdata.com/streamplay)**. Apache-2.0. Active development; no stable release yet.
 
-Start by exploring. Add expected outputs once you understand the behavior.
+![StreamPlay scenario suite showing expected and actual output for two passing Node.js application tests](docs/images/scenario-suite.png)
 
-![StreamPlay capturing actual JSON output from its included Node.js process example](docs/images/workbench.png)
+*Actual execution of the included Node.js example. The same runner powers the browser and CLI. This screenshot is not a Flink result.*
 
-## Try the working development slice
+## Start locally
 
-Requires **Node.js 22+**. No account or cloud service needed.
+Requires Node.js 22+. No account, paid backend or AI service.
 
 ```sh
 git clone https://github.com/revenirdata/streamplay.git
@@ -32,162 +26,81 @@ npm ci
 npm start
 ```
 
-Open **http://127.0.0.1:4317** and click **Run scenario**. Three sample events go through a real, separate Node.js process: two duplicate orders produce two outputs; a zero-quantity order produces none.
+Open **http://127.0.0.1:4317** and click **Run scenario**. The included [Node.js process](examples/process/transform.js) calculates order totals: two duplicate inputs produce two outputs, while a zero-quantity input produces none. It deliberately does not deduplicate. Edit that file, rerun, inspect the output, and add expectations when you know the correct behavior.
 
-Edit [`examples/process/transform.js`](examples/process/transform.js), rerun, and compare the saved outputs. This quickstart exercises the workbench with a **Node.js example**, not Flink or a simulated streaming engine.
-
-## Run Kafka → Flink → Kafka
-
-With Docker Engine/Desktop and Compose v2 running, allocate roughly 4 GB RAM and sufficient disk for the images:
+Run a complete saved suite without opening the UI:
 
 ```sh
-npm run example:up
-npm start
+npm run run:suite -- examples/suites/orders.process.json
 ```
 
-Select **Kafka → your application → Kafka** in the workbench and run the same events. The packaged example uses **Apache Kafka 3.9.1**, **Apache Flink 1.20.2**, and **Flink Kafka SQL connector 3.3.0-1.20**. These are pinned example versions, not a claim to cover every version.
+For independent live sources and lifecycle controls, run **`npm run lab`**. Choose an event preset or your own JSON template, add sources, configure values and cadence, and inspect each source's records. [Live-source setup](docs/LIVE-SOURCES.md).
 
-The transformation is ordinary [Flink SQL](examples/kafka-flink/orders.sql), executed by Flink. View the job at **http://127.0.0.1:18081**. To edit and resubmit it from a clean sandbox:
+## What you can do
 
-```sh
-npm run example:down
-# Edit examples/kafka-flink/orders.sql in your editor.
-npm run example:up
-```
+![Current pipeline graph with captured output from the included Node.js process](docs/images/pipeline.png)
 
-`example:down` removes this example's Compose containers and volumes, including its Kafka data and Flink state. It does not delete saved workbench runs. Re-running `example:up` while the job is already running keeps that job; it does not apply SQL edits.
+- **Inspect the pipeline.** A dark graph shows named topics/streams, sources, processors and outputs. Click a node for captured JSON and metadata; pause inspection while capture continues. Graph edges describe architecture, not inferred per-event causality.
+- **Prepare controlled inputs.** Paste JSON, import NDJSON with original-line errors, or generate timed phases. Model application events, sensor readings or meters with configurable fields and seeded profiles. Up to 20 independent live sources by default.
+- **Run real code.** Use the process quickstart, the Kafka boundary adapter, or a trusted local application binding. Source and sink transports can differ.
+- **Assert behavior.** Run one scenario or a suite. See expected versus actual output, duplicate counts, each test's records and logs, and explicit PASS/FAIL/ERROR/NOT RUN states. No expectations means OBSERVED, not PASS.
+- **Retain evidence.** Save runs, compare outputs, export scenarios and suite reports, and keep partial results on cancellation. View metadata without hiding the original payload.
+- **Exercise recovery.** The included Kafka/Flink experiment kills a worker and checks checkpoint restoration. Delivery reconciliation compares exact record IDs at checkpoints; local queue tests exercise retry, dead-letter preservation and recovery.
 
-Run the same scenario without the browser:
+![Per-test inspection of actual output JSON](docs/images/scenario-suite-evidence.png)
 
-```sh
-npm run run:scenario -- examples/scenarios/orders.kafka.json
-```
+## Runnable streaming examples
 
-Exit code `1` means a mismatch or execution error. A scenario without `expected` captures observations; it does not assert correctness. [CI](https://github.com/revenirdata/streamplay/actions/workflows/ci.yml) starts the actual Kafka/Flink containers and checks two consecutive runs.
+These are pinned, local examples with integration tests—not universal engine or production certification. Docker Engine/Desktop with Compose v2 is required for JVM examples; leave room for several GB of images and runtime memory.
 
-## What works in this first slice
+| Application path | What it exercises | Start / instructions |
+| --- | --- | --- |
+| Kafka → Flink SQL → Kafka | Real SQL transform, duplicate-sensitive capture, repeated runs | `npm run example:up` · [SQL](examples/kafka-flink/orders.sql) |
+| Kafka → Kafka Streams JVM → Kafka | Persistent deduplication, aggregation, retained state, JVM restart and explicit reset | `npm run example:kafka-streams` · [guide](examples/kafka-streams/README.md) |
+| Local Kinesis → Flink JVM → local SQS | Staged input, keyed timeout/recovery timers, live raw output and a dedicated queue observer | `npm run example:kinesis-flink` · [guide](examples/kinesis-flink-sqs/README.md) |
+| MQTT → independent application → MQTT | Subscribe-before-send, QoS 1 acknowledgments, retained-output exclusion | [adapter guide](docs/LOCAL-ADAPTERS.md) · `examples/adapters/mqtt.js` |
 
-- Edit JSON event arrays; execute the included process example or send to configured Kafka topics.
-- Inspect raw input/output, Kafka offsets and partitions, producer acknowledgments, and process/adapter errors.
-- Save local run snapshots and scenarios; export scenario JSON to Git.
-- Compare outputs between runs with duplicate-sensitive, order-independent matching.
-- Optionally assert exact output records over a declared observation window; run those scenarios in a terminal or CI.
-- Run a [scenario suite](docs/SCENARIO-SUITES.md) from saved scenarios or `npm run run:suite -- examples/suites/orders.process.json`. Inspect expected versus actual results and each case's input, configuration and output JSON.
-- Inspect live records, cancel a run while retaining partial evidence, and reconnect after refreshing the browser.
-- Pace events with explicit delays and compare selected JSON fields without changing raw evidence.
-- Build named event phases for up to 20 identities, distinguish zero-valued events from silence, import saved scenarios/runs, and inspect planned versus actual send timing.
-- Attach a trusted [experimental local adapter](docs/LOCAL-ADAPTERS.md) to an existing application.
-- Navigate a dark [stream graph](docs/PIPELINE-GRAPH.md): named topics/streams, sources and processors, curved connections, raw-record inspection, and topology saved with each run.
+Kafka/Flink uses Kafka 3.9.1, Flink 1.20.2 and Kafka SQL connector 3.3.0-1.20. The JVM examples use Kafka Streams 3.9.1 / Flink 1.20.2 and Java 17. Kinesis and SQS are emulated by LocalStack 4.14.0; the Flink processing is real. See [CI and validation boundaries](docs/VALIDATION.md).
 
-The [product vision](docs/VISION.md) explains the deeper work next: portable application setup, explicit state/readiness, evidence comparisons and shareable regression cases.
-
-Local data stays under `.streamplay/`, excluded from Git. No telemetry. Runs can include sensitive event data; use appropriate development fixtures.
-
-## What a run means
-
-Kafka capture records output offsets **before** publishing, joins a fresh observation consumer group, and reads committed records at or beyond that boundary. Previously captured offsets are excluded. Outputs arriving during setup or from another producer may still appear: **offset boundaries are not causal correlation**. Use dedicated sandbox topics and one application; do not point this prototype at production.
-
-The full observation interval runs after the final input acknowledgment. `observed` means capture completed without assertions; `passed` means expected records matched during that interval; `failed` means they did not; `error` means execution/capture failed. A finite observation window cannot prove that no more outputs will arrive.
-
-A new run does **not** reset Kafka topics, Flink state, or the external application. The process example starts fresh each time. Initial-state assumptions are recorded in run metadata. Capture is capped at 10,000 output records or 5 MB; overflow is an error, never a successful truncated run.
+For the Kafka/Flink example, start the workbench with `npm start`, select **Kafka → your application → Kafka**, and run the fixture. The Flink UI is at **http://127.0.0.1:18081**. `npm run example:down` removes only that example's containers and volumes, including broker data and Flink state; saved workbench runs remain. To apply SQL edits, stop/reset and start the example again.
 
 ## Bring your application
 
-To distinguish delayed events from unaccounted ones after an interruption, use
-[delivery reconciliation](docs/DELIVERY-RECONCILIATION.md). It records exact IDs at named
-checkpoints and includes a real MQTT before/after recovery demonstration.
+Run your application separately and configure isolated Kafka input/output topics before starting StreamPlay:
 
-### Repeatable event sequences
-
-Expand **Build a device event sequence** to generate inputs from the first JSON event in the
-editor. Choose the identity/value field paths, up to 20 distinct identities, and named phases.
-An `emit` phase sends a numeric value at the chosen interval; a `silence` phase sends nothing.
-An emitted zero is a real input, not silence. Generated inputs and timing remain editable JSON.
-For a rate expressed in units/minute, `targetQuantity` can replace `durationMs`; this computes
-the planned duration, not physical or downstream accumulated volume.
-
-Sequences are capped at 1,000 events and 120 seconds. Generated schedules use a monotonic planned
-timeline, so send latency does not add another full delay to every subsequent event. Overdue
-events catch up; none are silently discarded. Run metadata records each event's planned time,
-dispatch time, acknowledgement time, phase and lateness. This is a functional test tool, not a
-hard real-time scheduler or a throughput benchmark.
-
-`tailMs` preserves a final quiet interval before the post-input observation window. Outputs are
-captured throughout sending, quiet time and observation. Relative scheduling remains available
-for existing scenarios. **Import scenario or run JSON** restores the validated scenario without
-importing credentials, executable code or connection settings. Save/export it, supply expected
-outputs, and rerun in the browser or CLI; no supplied assertions means **observed**, not PASS.
-
-These sequences work through the existing process, Kafka and trusted-local adapters. They do not
-assume any private device protocol. Application state remains
-adapter-defined; rerunning a plan does not imply restoring a checkpoint.
-
-### Experimental MQTT application adapter
-
-Use `examples/adapters/mqtt.js` as `STREAMPLAY_ADAPTER_MODULE` and select the local adapter.
-Set `STREAMPLAY_MQTT_URL`, `STREAMPLAY_MQTT_INPUT_TOPIC`, and `STREAMPLAY_MQTT_OUTPUT_TOPIC`
-at startup; optional credentials use `STREAMPLAY_MQTT_USERNAME` and `STREAMPLAY_MQTT_PASSWORD`.
-Topics must be distinct, exact names. The adapter subscribes before sending, excludes retained
-output, and uses QoS 1. A broker PUBACK does not establish successful application processing;
-only captured outputs and your assertions determine a passed run. Use dedicated sandbox topics.
-Application state is retained, and unrelated producers on those topics can contaminate capture.
-
-This generic JSON adapter has been tested with isolated local Mosquitto and an independent
-transform consumer, not remote TLS/authentication configurations or a device-specific protocol.
-Run `node scripts/mqtt-integration.js` with the test broker on loopback port 18884 to reproduce
-two successive runs, retained-message exclusion, and a deliberately failing output assertion.
-
-### Processing is not delivery
-
-A passing transformation scenario does not establish that a downstream queue has a consumer,
-failed deliveries have a dead-letter route, or production alarms use published metrics. Keep
-those contracts in your application's integration tests. A captured output or broker acknowledgement
-is not a customer-delivery receipt. See [operational validation](docs/OPERATIONAL-VALIDATION.md)
-for a reusable failure/recovery checklist and the evidence each check needs.
-
-Start your app separately and bind it to isolated Kafka input/output topics. Configure the workbench through environment variables; credentials and shell commands are not accepted from the browser.
-
-| Variable | Default |
+| Environment variable | Default |
 | --- | --- |
 | `STREAMPLAY_KAFKA_BROKERS` | `localhost:19092` |
 | `STREAMPLAY_INPUT_TOPIC` | `streamplay-orders-in` |
 | `STREAMPLAY_OUTPUT_TOPIC` | `streamplay-orders-out` |
 | `STREAMPLAY_PORT` | `4317` |
 | `STREAMPLAY_DATA_DIR` | `.streamplay` |
+| `STREAMPLAY_ADAPTER_MODULE` | Optional trusted local adapter |
+| `STREAMPLAY_TOPOLOGY_FILE` | Optional declared graph JSON |
 
-The initial Kafka adapter supports local plaintext brokers and JSON values. SASL/TLS configuration, record keys on input, schema registries, automatic app launch, and native engine log collection are future work. Local adapters can supply application logs. UTF-8 raw values and tombstone metadata are retained on output; binary decoding is not implemented. JSON assertions reject malformed records and tombstones rather than equating them with JSON strings or nulls.
+For other transports and application-specific controls, use a [local adapter](docs/LOCAL-ADAPTERS.md) and [application controls binding](docs/APPLICATION-CONTROLS.md). Bindings can expose configuration, readiness, logs, state inspection, test suites and lifecycle actions. They are trusted local code, not uploaded browser scripts.
 
-## First-release direction
+The bundled Kafka adapter currently supports plaintext local brokers and JSON values. SASL/TLS, input keys, schema registries and binary decoding are not implemented. Output offsets, partitions, timestamps, headers and tombstones are retained. [Full capability inventory](docs/LAB-PARITY.md).
 
-The first release targets these three paths:
+## What a passing run means
 
-| Path | Current state |
-| --- | --- |
-| Kafka → Flink → Kafka | Initial runnable example and integration CI |
-| Kafka → Kafka Streams → Kafka | Planned; native example, lifecycle, and reset verification still needed |
-| Kinesis → Flink → Kinesis | Planned; separate transport and AWS validation still needed |
+- PASS means the captured records matched the supplied expectations during a declared interval. It does not prove eventual completeness or customer delivery.
+- Each run records its execution conditions. Starting a new run does **not** reset external application state. Reset behavior belongs to the application binding or example lifecycle.
+- Kafka observations start at recorded output offsets with a fresh consumer group. These boundaries exclude earlier offsets but do not prove causal correlation; use dedicated test topics without unrelated producers.
+- Queue observers may consume messages. The public SQS pilot requires sole ownership and documents its capture/acknowledgment behavior. Capture is held in memory until completion; it is not crash-safe archival.
+- Limits are explicit: 1,000 input events, a 512 KB fixture budget, and 10,000 output records or 5 MB. Overflow, capture and cleanup failures remain errors.
 
-Kafka and Kinesis move events. Flink and Kafka Streams process them. Their semantics and APIs differ; StreamPlay shares the workbench around them rather than pretending they are interchangeable. This public development repository precedes the first release; there is no claim that all three integrations are ready.
+Local runs are stored under `.streamplay/`, excluded from Git. No telemetry. [Scenario suites](docs/SCENARIO-SUITES.md) · [pipeline graph](docs/PIPELINE-GRAPH.md) · [Flink recovery](docs/FLINK-RECOVERY.md) · [delivery reconciliation](docs/DELIVERY-RECONCILIATION.md).
 
-Trusted local bindings can now expose lifecycle controls, editable configuration, live observations, logs and state inspection in the workbench. See the experimental [application controls interface](docs/APPLICATION-CONTROLS.md). Application-specific commands and validation stay in the local binding.
+## Development and contributions
 
-See the [validation evidence and gaps](docs/VALIDATION.md), [roadmap](docs/ROADMAP.md), and [architecture](docs/ARCHITECTURE.md). There is no independent adoption evidence yet.
-
-## Contribute
-
-Start with [CONTRIBUTING.md](CONTRIBUTING.md). Useful early contributions include reproducible streaming scenarios, raw-data inspection improvements, and adapter correctness tests. The goal is a tool engineers return to while changing real transformations.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). Useful contributions are reproducible streaming scenarios, clearer evidence inspection, and adapter correctness tests. An example running successfully is not proof that independent engineers find the tool useful; that remains a release gate.
 
 ```sh
-npm ci
 npm run check
 npm test
 npx playwright install chromium
 npx playwright test
 ```
 
-**Creator and lead maintainer:** [Carl Salazar (@kc-salazar)](https://github.com/kc-salazar). **Project home:** [Revenir](https://github.com/revenirdata). [Maintainer model](MAINTAINERS.md) · [Apache-2.0 license](LICENSE).
-## Inspect Flink recovery
-
-Run `npm run lab:recovery` to inspect actual Kafka input/output JSON while a dedicated
-stateful Flink worker is killed and restored from a checkpoint. The experiment checks
-saved state and buffered inputs, and exports its evidence. [Setup and exact boundaries](docs/FLINK-RECOVERY.md).
+[Vision and scope](docs/VISION.md) · [roadmap](docs/ROADMAP.md) · [validation](docs/VALIDATION.md) · [architecture](docs/ARCHITECTURE.md) · [maintainers](MAINTAINERS.md) · [license](LICENSE).

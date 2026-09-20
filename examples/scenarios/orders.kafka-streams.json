@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "Kafka Streams deduplication — fresh state",
+  "adapter": "kafka",
+  "observeMs": 6000,
+  "events": [
+    { "event_id": "evt-1", "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 },
+    { "event_id": "evt-1", "order_id": "order-101", "quantity": 2, "unit_price_cents": 3000 }
+  ],
+  "expected": [{ "order_id": "order-101", "total_cents": 6000, "unique_events": 1 }]
+}

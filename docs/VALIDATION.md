@@ -8,6 +8,10 @@ StreamPlay is an early prototype, not an MVP or a validated developer product. P
 | --- | --- | --- |
 | Real process execution | Spawned process, readiness, raw output, source digest, exit errors | Flink or Kafka Streams semantics |
 | Kafka/Flink | Actual Docker services, repeated runs, offset boundaries, duplicate counts, negative assertions | Arbitrary user applications, all versions, event-time correctness |
+| Kafka Streams JVM | Actual persistent-store application, duplicates, retained-state rerun, JVM restart, accumulation, scoped reset | General state migration, production TTL policy or all Kafka versions |
+| Public Kinesis/Flink/SQS pilot | Real Flink keyed timers, staged timeout/recovery, live output, generated IDs/timestamps, second-observer rejection and stopped-app failure | Real AWS, checkpointed Kinesis source offsets, multi-shard production connectors or crash-safe queue archival |
+| NDJSON | Original-line errors, blank lines/BOM/CRLF, preserved duplicates and JSON values, limits, browser import/run/export | Binary formats or schema registry integration |
+| Suites | Sequential cases, expected/actual results, per-test JSON/logs, cancellation, partial evidence and CLI exit status | Universal application reset or automatic causal explanation |
 | Assertions | Late duplicates, missing output, invalid JSON, tombstones, selected/missing fields | Eventual completeness or automatic diagnosis |
 | Lifecycle | Staged sends, cancellation, partial evidence, adapter/cleanup errors | Forced cancellation of arbitrary plugins |
 | Storage | Immutable artifact publication; write failures preserve evidence in the response | Crash-safe capture journals or multi-process run isolation |
@@ -24,7 +28,7 @@ The private pilot also exercises the replacement developer workflow through Stre
 
 ## Gaps that block an MVP claim
 
-- First-class Kinesis and Kafka Streams integrations remain incomplete.
+- Bundled Kafka Streams and local Kinesis/Flink/SQS examples are reproducible; general Kinesis transport and real AWS support remain incomplete.
 - Configuring a private local adapter still requires substantial engineering work.
 - Application lifecycle/configuration/diagnostic controls require a trusted binding; dependency bootstrapping and general state-reset semantics are not implemented.
 - Topic/queue isolation and known initial application state are still operator responsibilities.

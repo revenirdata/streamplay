@@ -1,4 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
+export function parseNdjson(text) {
+  if (typeof text !== 'string' || new TextEncoder().encode(text).length > 512_000) throw new Error('NDJSON must fit within 512 KB.');
+  const events = [];
+  for (const [index, line] of text.replace(/^\uFEFF/, '').split(/\r?\n/).entries()) {
+    if (!line.trim()) continue;
+    try { events.push(JSON.parse(line)); }
+    catch { throw new Error(`Invalid JSON on line ${index + 1}. No events imported.`); }
+    if (events.length > 1000) throw new Error('Supply 1–1000 JSON events.');
+  }
+  if (!events.length) throw new Error('Supply 1–1000 JSON events.');
+  if (JSON.stringify(events).length > 512_000) throw new Error('Events must fit within 512 KB.');
+  return events;
+}
+
 export function validateScenario(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Scenario must be an object.');
   if (value.version !== 1) throw new Error('Scenario version must be 1.');

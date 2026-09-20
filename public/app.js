@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createPipelineGraph } from './graph.js';
 import { buildExperiment, thresholdPhases } from './experiment.js';
-import { validateScenario } from './scenario.js';
+import { validateScenario, parseNdjson } from './scenario.js';
 import { initializeLab } from './lab.js';
 import { createApplicationControls } from './application-controls.js';
 import { initializeDeliveryAudit, showDeliveryAudit } from './reconciliation.js';
@@ -97,6 +97,18 @@ $('threshold-build').onclick = safe(() => {
   message('Below, exactly at, and above phases prepared. Generate the sequence, then define expected outputs for your application.');
 });
 $('events').addEventListener('input', () => { phaseNames = undefined; });
+$('import-ndjson').onchange = safe(async () => {
+  const file = $('import-ndjson').files[0]; if (!file) return;
+  try {
+    if (file.size > 512000) throw new Error('NDJSON must fit within 512 KB.');
+    const events = parseNdjson(await file.text());
+    $('events').value = pretty(events);
+    // A new fixture cannot inherit the old fixture's timing or phase assertions.
+    $('schedule').value = ''; $('tail').value = '0'; $('phase-expected').value = '';
+    phaseNames = undefined; phaseExpectations = undefined;
+    message(`Imported ${events.length} events. Duplicates and JSON values preserved. Review expected output before running.`);
+  } finally { $('import-ndjson').value = ''; }
+});
 $('schedule').addEventListener('input', () => { phaseNames = undefined; });
 $('import-scenario').onchange = safe(async () => {
   const file = $('import-scenario').files[0]; if (!file) return;
