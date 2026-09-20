@@ -5,6 +5,8 @@ import { validateScenario } from './scenario.js';
 import { initializeLab } from './lab.js';
 import { createApplicationControls } from './application-controls.js';
 import { initializeDeliveryAudit, showDeliveryAudit } from './reconciliation.js';
+import { applicationTestReports, createTestResults } from './test-results.js';
+import { initializeSuitePanel } from './suite-panel.js';
 initializeDeliveryAudit();
 const $ = id => document.getElementById(id);
 const graph = createPipelineGraph();
@@ -21,6 +23,8 @@ async function api(path, value) {
   if (!response.ok) throw new Error(body.error);
   return body;
 }
+const suitePanel = initializeSuitePanel(api, refresh);
+const applicationResults = createTestResults($('application-test-results'));
 function message(text) { $('message').textContent = text; }
 function scenario() {
   const expected = $('expected').value.trim();
@@ -78,6 +82,7 @@ async function refresh() {
   const runLabel = r => `${r.scenario.name} · ${r.status} · ${new Date(r.startedAt).toLocaleTimeString()}`;
   options('history', runs, 'Choose a saved run', runLabel); options('baseline', runs, 'Choose a reference run', runLabel);
   options('saved', scenarios, 'Choose a saved scenario', s => s.scenario.name);
+  suitePanel.updateScenarios(scenarios);
 }
 function safe(fn) { return async () => { try { await fn(); } catch (error) { message(error.message); } }; }
 $('sequence-build').onclick = safe(() => {
@@ -104,6 +109,7 @@ $('import-scenario').onchange = safe(async () => {
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
+  applicationResults.render(applicationTestReports(snapshot));
   if (snapshot.deliveryAudit) showDeliveryAudit(snapshot.deliveryAudit);
   applicationControls?.update(snapshot);
   applicationControls?.setDisabled(applicationPending);
@@ -131,12 +137,12 @@ async function refreshApplication() {
 function initializeApplication(description) {
   if (!description) return;
   if (description.view === 'recovery') {
-    for (const element of document.querySelectorAll('.workspace, .history, #application-advanced, #delivery-audit')) element.hidden = true;
+    for (const element of document.querySelectorAll('.workspace, .history, #application-advanced, #delivery-audit, #scenario-suite')) element.hidden = true;
     document.querySelector('h1').textContent = 'Flink recovery test';
     document.querySelector('.intro .sub').textContent = 'Input records, checkpoints, and output records during a worker restart.';
   }
   if (description.view === 'delivery') {
-    for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export')) element.hidden = true;
+    for (const element of document.querySelectorAll('.pipeline, .workspace, .history, #application-advanced, #application > .tabs, #application-records, #application-export, #scenario-suite')) element.hidden = true;
     document.querySelector('h1').textContent = 'Delivery checks';
     document.querySelector('.intro .sub').textContent = 'Published events and downstream observations by event ID.';
   }
@@ -198,8 +204,9 @@ $('run').onclick = safe(async () => {
   message('Connecting, sending events, and observing output…');
   try {
     const run = await api('runs', value); live = false;
-    try { await refresh(); $('history').value = run.id; } catch (error) { message(`History could not be loaded: ${error.message}`); }
     showRun(run); message(run.storage?.saved === false ? 'Run could not be saved. Export the captured run JSON now to retain it.' : `Run saved locally · ${run.id}`);
+    void refresh().then(() => { if (current?.id === run.id) $('history').value = run.id; })
+      .catch(error => message(`History could not be loaded: ${error.message}`));
   }
   finally { live = false; clearInterval(poll); $('run').disabled = false; $('cancel').disabled = true; $('compare').disabled = false; }
 });

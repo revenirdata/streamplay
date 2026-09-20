@@ -22,6 +22,7 @@
 <div><label for="application-input">Action input <span>JSON</span></label><textarea id="application-input" rows="7" spellcheck="false"></textarea><p class="hint">Used by application controls that accept input. Scenario runs use the event editor below.</p></div>
 </div></details>
 <div class="tabs" role="tablist" aria-label="Application details"><button role="tab" aria-selected="true" data-application-tab="outputs">Live outputs</button><button role="tab" aria-selected="false" data-application-tab="inputs">Live inputs</button><button role="tab" aria-selected="false" data-application-tab="logs">Application logs</button><button role="tab" aria-selected="false" data-application-tab="state">Application state</button><button role="tab" aria-selected="false" data-application-tab="reports">Reports</button><button role="tab" aria-selected="false" data-application-tab="queues">Queues</button></div>
+<div id="application-test-results" hidden></div>
 <pre id="application-records" class="application-records" role="tabpanel"></pre>
 <button id="application-export">Export application evidence</button>
 </section>
@@ -45,9 +46,15 @@
 <details id="lab-configuration-panel" hidden><summary>Application configuration</summary><label for="lab-configuration">JSON for the trusted application adapter</label><textarea id="lab-configuration" rows="6">{}</textarea><button id="lab-configuration-apply" data-lab-action>Apply configuration</button></details>
 <details><summary>Application state</summary><pre id="lab-state" class="application-records"></pre></details>
 <div id="lab-queues" hidden><h3>Sandbox queue health</h3><p class="hint">The inspector starts paused. Resume consumes and deletes messages from the configured local queues. It never delivers customer notifications.</p><div class="actions"><button id="lab-pause" data-lab-action>Pause output consumer</button><button id="lab-resume" data-lab-action>Resume output consumer</button><button id="lab-queue-check" data-lab-action>Test queue recovery</button></div><pre id="lab-queue-state" class="application-records"></pre></div>
+<div id="lab-test-results" hidden></div>
 <details><summary>Regression checks and recovery report</summary><p class="hint">Runs only checks defined in the trusted startup module. Missing checks are reported as not configured.</p><button id="lab-checks" data-lab-action>Run regression checks</button><pre id="lab-report" class="application-records"></pre></details>
 <div class="application-grid"><details><summary>Captured input JSON</summary><pre id="lab-inputs" class="application-records"></pre></details><details><summary>Captured output JSON</summary><pre id="lab-outputs" class="application-records"></pre></details></div>
 <details><summary>Lab logs</summary><pre id="lab-logs" class="application-records"></pre></details><button id="lab-export">Export lab evidence</button><p id="lab-message" role="status" aria-live="polite"></p>
+</section>
+<section id="scenario-suite" class="panel application" aria-label="Saved scenario suite">
+<h2>Scenario suite</h2><p class="hint">Select saved scenarios and run them sequentially through their configured adapters. Each case uses the same runner as the event editor. No expectations means OBSERVED, not PASS. Source and infrastructure regressions remain separate adapter checks.</p>
+<div id="suite-choices" class="suite-choices"></div><div class="actions"><button id="suite-run" disabled>Run selected suite</button><button id="suite-cancel" disabled>Cancel suite</button><button id="suite-plan-export">Export suite plan</button></div>
+<p id="suite-message" role="status"></p><p class="hint">Code-first: <code>npm run run:suite -- streamplay-suite.json</code>. Change application code, rebuild/restart it as needed, then rerun. The suite does not hot-reload your application.</p><div id="suite-results"></div>
 </section>
 <div class="workspace">
 <section class="panel setup"><div class="panel-title"><h2>01 <span>Prepare events</span></h2><button id="reset" class="quiet">Load example</button></div>

@@ -72,6 +72,7 @@ Exit code `1` means a mismatch or execution error. A scenario without `expected`
 - Save local run snapshots and scenarios; export scenario JSON to Git.
 - Compare outputs between runs with duplicate-sensitive, order-independent matching.
 - Optionally assert exact output records over a declared observation window; run those scenarios in a terminal or CI.
+- Run a [scenario suite](docs/SCENARIO-SUITES.md) from saved scenarios or `npm run run:suite -- examples/suites/orders.process.json`. Inspect expected versus actual results and each case's input, configuration and output JSON.
 - Inspect live records, cancel a run while retaining partial evidence, and reconnect after refreshing the browser.
 - Pace events with explicit delays and compare selected JSON fields without changing raw evidence.
 - Build named event phases for up to 20 identities, distinguish zero-valued events from silence, import saved scenarios/runs, and inspect planned versus actual send timing.

@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 
 export function createStore(root) {
   function path(kind, id) {
-    if (!['runs', 'scenarios'].includes(kind) || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid artifact identifier.');
+    if (!['runs', 'scenarios', 'suites'].includes(kind) || !/^[a-f0-9-]{36}$/.test(id)) throw new Error('Invalid artifact identifier.');
     return join(root, kind, `${id}.json`);
   }
   return {

@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { configuration } from './config.js';
 import { createStore } from './store.js';
 import { runScenario } from './runner.js';
+import { runSuite, validateSuite } from './suite.js';
 import { validateScenario } from './scenario.js';
 import { loadLocalAdapter } from './adapters/local.js';
 import { validateTopology } from './topology.js';
@@ -19,11 +20,14 @@ assets['/lab.js'] = ['lab.js', 'text/javascript'];
 assets['/application-controls.js'] = ['application-controls.js', 'text/javascript'];
 assets['/reconciliation.js'] = ['reconciliation.js', 'text/javascript'];
 assets['/delivery-model.js'] = ['../src/reconciliation.js', 'text/javascript'];
+assets['/test-results.js'] = ['test-results.js', 'text/javascript'];
+assets['/suite-panel.js'] = ['suite-panel.js', 'text/javascript'];
 const sample = JSON.parse(await readFile(new URL('../examples/scenarios/orders.process.json', import.meta.url), 'utf8'));
 
 export function workbench(config = configuration(), adapters = {}) {
   const store = createStore(config.dataDir);
   let active = null;
+  let latestSuite = null;
   let controller = null;
   let applicationAction = null;
   const application = config.application;
@@ -49,8 +53,10 @@ export function workbench(config = configuration(), adapters = {}) {
       if (req.method === 'GET' && url.pathname === '/api/application') return application ? send(200, { ...await application.snapshot(), busy: applicationAction ?? application.busy ?? null, runningScenario: Boolean(active) }) : send(404, { error: 'No application configured.' });
       if (req.method === 'GET' && url.pathname === '/api/active') return send(200, active);
       if (req.method === 'GET' && url.pathname === '/api/runs') return send(200, await store.list('runs'));
+      if (req.method === 'GET' && url.pathname === '/api/suites') return send(200, await store.list('suites'));
+      if (req.method === 'GET' && url.pathname === '/api/suite') return send(200, latestSuite ?? (await store.list('suites'))[0] ?? null);
       if (req.method === 'GET' && url.pathname === '/api/scenarios') return send(200, await store.list('scenarios'));
-      if (req.method !== 'POST' || !['/api/runs', '/api/scenarios', '/api/cancel', '/api/application', '/api/lab'].includes(url.pathname)) return send(404, { error: 'Not found.' });
+      if (req.method !== 'POST' || !['/api/runs', '/api/suites', '/api/scenarios', '/api/cancel', '/api/application', '/api/lab'].includes(url.pathname)) return send(404, { error: 'Not found.' });
       if (!req.headers['content-type']?.startsWith('application/json')) return send(415, { error: 'Send application/json.' });
       if (url.pathname === '/api/cancel') {
         if (!controller) return send(409, { error: 'No active run.' });
@@ -79,7 +85,7 @@ export function workbench(config = configuration(), adapters = {}) {
         try { return send(200, await application.act(body.action, body.value)); }
         finally { applicationAction = null; }
       }
-      const scenario = validateScenario(body);
+      const scenario = url.pathname === '/api/suites' ? validateSuite(body) : validateScenario(body);
       if (url.pathname === '/api/scenarios') {
         const id = await store.save('scenarios', { scenario, savedAt: new Date().toISOString() });
         return send(201, { id });
@@ -88,6 +94,11 @@ export function workbench(config = configuration(), adapters = {}) {
       active = { phase: 'connecting' };
       controller = new AbortController();
       try {
+        if (url.pathname === '/api/suites') {
+          const suite = await runSuite(scenario, { store, kafka: config.kafka, topology, adapters, signal: controller.signal,
+            onUpdate: update => { active = update; latestSuite = update.suite; } });
+          return send(201, suite);
+        }
         const run = await runScenario(scenario, { store, kafka: config.kafka, topology, adapters, signal: controller.signal, onUpdate: update => { active = update; } });
         return send(201, run);
       } finally { active = null; controller = null; }
@@ -106,7 +117,7 @@ if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) 
   const server = workbench(config, adapters);
   server.listen(config.port, '127.0.0.1', () => console.log(`StreamPlay → http://127.0.0.1:${server.address().port}\nLocal artifacts: ${config.dataDir}`));
   let stopping = false;
-  const shutdown = async (code = 0) => { if (stopping) return; stopping = true; server.close(); await config.lab?.close(); process.exit(code); };
+  const shutdown = async (code = 0) => { if (stopping) return; stopping = true; server.cancelActiveRun(); await new Promise(resolve => server.close(resolve)); await config.lab?.close(); process.exit(code); };
   server.on('error', error => { console.error(error.message); void shutdown(1); });
   process.on('SIGINT', () => void shutdown()); process.on('SIGTERM', () => void shutdown());
   // IPC permits graceful shutdown on Windows, where child.kill() terminates immediately.

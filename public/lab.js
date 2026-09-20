@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { sourcePresets, validateProfile, renderSource } from './source-profile.js';
+import { applicationTestReports, createTestResults } from './test-results.js';
 export function initializeLab(description, { api, graph, config }) {
   if (!description) return;
   const $ = id => document.getElementById(id);
   $('lab').hidden = false;
   $('lab-name').textContent = description.name;
+  const results = createTestResults($('lab-test-results'));
   let snapshot, pending = false, selected, profileLoaded = false;
   const pretty = value => JSON.stringify(value, null, 2);
   const download = (value, name) => { const url = URL.createObjectURL(new Blob([pretty(value)], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
@@ -26,6 +28,7 @@ export function initializeLab(description, { api, graph, config }) {
     $('lab-episode-report').textContent = pretty(selected?.report ?? { status: 'No episode yet' });
     $('lab-queue-state').textContent = pretty(snapshot.queues ?? { status: 'No queue inspector configured' });
     $('lab-report').textContent = pretty(snapshot.report ?? { status: 'No regression report yet', checks: description.checks });
+    results.render(applicationTestReports({ reports: { checks: snapshot.report } }));
     $('lab-state').textContent = pretty(snapshot.state);
     $('lab-logs').textContent = snapshot.logs.join('\n');
     $('lab-inputs').textContent = pretty(snapshot.inputs);

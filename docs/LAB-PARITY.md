@@ -27,9 +27,15 @@ This inventory covers the reusable capabilities of the reference local Flink lab
 | Pause/resume output inspector | Await current poll, pause further reads, resume and drain | Unit test and real local SQS integration; inspector consumes/deletes test messages |
 | Queue recovery experiment | Unique disposable FIFO queues, failed processing, retries, DLQ preservation, same-group recovery, drain, cleanup | Six real local SQS assertions; report persists with cleanup evidence |
 | Regression checks from UI | Startup-defined commands, no shell, bounded time/output, required success evidence, JSON report | Positive/zero-evidence/failure/timeout tests; no configured tests is not a pass |
+| Run a complete scenario suite | Select saved scenarios in the UI or `npm run run:suite -- suite.json`; adapter-specific suites share the same results view | Sequential execution, continue after assertion failure, stop on transport/cleanup error, immutable run/suite artifacts |
+| Expected/actual table and per-test inspection | Generic suites, adapter suites, individual adapter scenarios and regression checks | Inspect assertions, input JSON, configuration, output JSON, logs and full report; selection persists across polling; export per case or full suite |
+| Cancel a suite without implying success | Active case cleans up; remaining cases stay NOT RUN; unasserted cases stay OBSERVED | Runner, HTTP and browser tests; CLI exits nonzero unless every case passes |
 | Clear without destroying state | Clears displayed capture while preserving totals, application state and report | Unit/browser tests; no queue purge |
 
 ## Application-specific adapters
+
+See [scenario suites and result inspection](SCENARIO-SUITES.md) for the suite format,
+terminal workflow and adapter report contract.
 
 The generic runner does not bundle a private application's rules or tests. An adapter can
 run that application's existing synthesized-infrastructure and delivery-handler tests through
