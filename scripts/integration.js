@@ -8,15 +8,19 @@ import { flinkJobs } from './example.js';
 
 const config = configuration();
 const scenario = JSON.parse(await readFile('examples/scenarios/orders.kafka.json', 'utf8'));
+const topology = JSON.parse(await readFile('examples/kafka-flink/topology.json', 'utf8'));
 assert.ok((await flinkJobs()).some(j => j.name === 'streamplay-orders' && j.state === 'RUNNING'), 'Real Flink job must be running');
 // Two consecutive runs prove we exclude previously observed output offsets.
 for (let i = 0; i < 2; i++) {
-  const run = await runScenario(scenario, { kafka: config.kafka, store: createStore(config.dataDir) });
+  const run = await runScenario(scenario, { kafka: config.kafka, topology, store: createStore(config.dataDir) });
   console.log(JSON.stringify(run, null, 2));
   assert.equal(run.status, 'passed', run.error ?? JSON.stringify(run.assertion));
   assert.equal(run.inputs.length, 3);
   assert.equal(run.outputs.length, 2);
   assert.ok(run.outputs.every(record => record.transport === 'kafka' && record.offset !== undefined));
+  assert.equal(run.topology.nodes.find(node => node.id === 'input').label, config.kafka.inputTopic);
+  assert.equal(run.topology.nodes.find(node => node.id === 'output').label, config.kafka.outputTopic);
+  assert.equal(run.topology.nodes.find(node => node.id === 'flink').label, 'Apache Flink · orders');
 }
 console.log('Verified two Kafka → Flink → Kafka runs, including duplicate counts and output offset boundaries.');
 

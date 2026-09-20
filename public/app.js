@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+import { createPipelineGraph } from './graph.js';
 const $ = id => document.getElementById(id);
+const graph = createPipelineGraph();
 let config, current, runs = [], scenarios = [], tab = 'outputs';
 let applicationSnapshot, applicationTab = 'outputs', applicationPending = false;
 let lastApplicationConfiguration;
@@ -45,6 +47,7 @@ function showRecords() {
   });
 }
 function showRun(run) {
+  graph.showRun(run);
   current = run; $('status').textContent = run.status; $('status').dataset.state = run.status;
   $('input-count').textContent = run.inputs.length; $('output-count').textContent = run.outputs.length;
   $('duration').textContent = `${run.scenario.observeMs / 1000}s`;
@@ -68,6 +71,7 @@ function safe(fn) { return async () => { try { await fn(); } catch (error) { mes
 function showApplication() {
   if (!applicationSnapshot) return;
   const snapshot = applicationSnapshot;
+  graph.update({ snapshot });
   $('application-status').textContent = snapshot.status;
   $('application-status').dataset.state = snapshot.status;
   $('application-detail').textContent = snapshot.detail ?? '';
@@ -121,7 +125,7 @@ function initializeApplication(description) {
   const poll = async () => {
     if (polling) return; polling = true;
     try { await refreshApplication(); }
-    catch (error) { $('application-status').textContent = 'unavailable'; $('application-detail').textContent = error.message; }
+    catch (error) { $('application-status').textContent = 'unavailable'; $('application-detail').textContent = error.message; graph.update({ snapshot: { ...applicationSnapshot, status: 'unavailable', detail: error.message } }); }
     finally { polling = false; }
   };
   void poll(); setInterval(poll, 1000);
@@ -157,11 +161,11 @@ $('export').onclick = safe(() => {
   const value = scenario(); const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([pretty(value) + '\n'], { type: 'application/json' }));
   link.href = url; link.download = 'scenario.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); message('Scenario exported.');
 });
-$('reset').onclick = () => { fill(config.sample); message('Example loaded.'); };
-$('adapter').onchange = () => { if ($('adapter').value === 'kafka' && Number($('window').value) < 5000) $('window').value = 5000; connection(); };
+$('reset').onclick = () => { fill(config.sample); graph.preview(config.sample.adapter); message('Example loaded.'); };
+$('adapter').onchange = () => { if ($('adapter').value === 'kafka' && Number($('window').value) < 5000) $('window').value = 5000; connection(); graph.preview($('adapter').value); };
 $('refresh').onclick = safe(refresh);
 $('load-run').onclick = () => { const run = runs.find(r => r.id === $('history').value); if (run) { showRun(run); fill(run.scenario); message('Loaded the saved run and its original scenario.'); } else message('Choose a saved run first.'); };
-$('load-scenario').onclick = () => { const saved = scenarios.find(s => s.id === $('saved').value); if (saved) { fill(saved.scenario); message('Saved scenario loaded.'); } else message('Choose a saved scenario first.'); };
+$('load-scenario').onclick = () => { const saved = scenarios.find(s => s.id === $('saved').value); if (saved) { fill(saved.scenario); graph.preview(saved.scenario.adapter); message('Saved scenario loaded.'); } else message('Choose a saved scenario first.'); };
 const canonical = value => Array.isArray(value) ? `[${value.map(canonical).join(',')}]` : value && typeof value === 'object' ? `{${Object.keys(value).sort().map(k => `${JSON.stringify(k)}:${canonical(value[k])}`).join(',')}}` : JSON.stringify(value);
 $('compare').onclick = () => {
   const selected = runs.find(r => r.id === $('history').value), reference = runs.find(r => r.id === $('baseline').value);
@@ -173,7 +177,7 @@ $('compare').onclick = () => {
 };
 document.querySelectorAll('[data-tab]').forEach(button => { button.onclick = () => { tab = button.dataset.tab; document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b === button))); showRecords(); }; });
 try {
-  config = await api('config'); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); await refresh();
+  config = await api('config'); graph.update({ config, adapter: config.sample.adapter }); $('local-option').disabled = !config.localAdapter; fill(config.sample); initializeApplication(config.application); await refresh();
   if (config.active) {
     $('run').disabled = true; $('cancel').disabled = false; $('compare').disabled = true;
     let id = config.active.id, loaded = false;
