@@ -1,0 +1,19 @@
+name: streamplay-kinesis-flink
+services:
+  localstack:
+    image: localstack/localstack:4.14.0
+    ports: ["127.0.0.1:4568:4566"]
+    environment:
+      SERVICES: kinesis,sqs
+      SQS_ENDPOINT_STRATEGY: path
+      LOCALSTACK_HOST: localhost:4566
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  application:
+    build: ../jvm
+    image: streamplay-jvm-examples:local
+    command: ["com.revenir.streamplay.Telemetry"]
+    depends_on: { localstack: { condition: service_healthy } }

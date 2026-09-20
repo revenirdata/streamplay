@@ -14,6 +14,13 @@
     "url": "https://github.com/revenirdata/streamplay.git"
   },
   "scripts": {
+    "example:kafka-streams": "node scripts/kafka-streams.js up",
+    "example:kafka-streams:stop": "node scripts/kafka-streams.js stop",
+    "example:kafka-streams:reset": "node scripts/kafka-streams.js reset",
+    "test:kafka-streams": "node scripts/kafka-streams-integration.js",
+    "example:kinesis-flink": "node scripts/kinesis-flink.js up",
+    "example:kinesis-flink:down": "node scripts/kinesis-flink.js down",
+    "test:kinesis-flink": "node scripts/kinesis-flink-integration.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "lab": "node scripts/lab.js",

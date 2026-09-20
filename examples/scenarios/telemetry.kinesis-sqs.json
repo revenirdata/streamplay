@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "Telemetry timeout and recovery",
+  "adapter": "local",
+  "events": [{"device_id":"sensor-example","value":21.5},{"device_id":"sensor-example","value":22}],
+  "scheduleMs": [0, 4500],
+  "observeMs": 4000,
+  "matchFields": ["device_id", "status"],
+  "expected": [{"device_id":"sensor-example","status":"received"},{"device_id":"sensor-example","status":"timeout"},{"device_id":"sensor-example","status":"recovered"},{"device_id":"sensor-example","status":"timeout"}]
+}
