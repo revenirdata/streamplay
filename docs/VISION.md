@@ -20,7 +20,7 @@ The private application pilot establishes narrow local workflow feasibility. It 
 The hard work is integration with existing applications, trustworthy state/isolation semantics, evidence provenance and portable execution. A UI alone does not solve these. The intended advantage is a connected development workflow over real applications, with transparent correctness boundaries. It is a hypothesis to validate, not a claim that no competing tools exist.
 
 ## Delivery order
-The immediate first slice is an interactive **stream graph**: named devices/sources → streams/topics → processing applications → outputs, with curved connections and selectable evidence. It makes an experiment navigable, while preserving the difference between declared architecture and actual boundary observations. Dark mode is the default. This precedes the four deeper capabilities below; it does not replace them.
+The implemented **stream graph** shows named devices/sources → streams/topics → processing applications → outputs, with curved connections and selectable evidence. Live-source controls and scenario suites now share the workbench. These make experiments navigable while preserving the difference between declared architecture and actual boundary observations. Dark mode is the default. They support the four deeper capabilities below; they do not complete them.
 
 1. Connect an existing app through a versioned, portable project definition shared by UI and CLI. First support configured local Kafka topics and an optional trusted binding module. Remove machine-specific launchers.
 2. Repeat experiments with explicit fresh/retained/unknown state, readiness, reset receipts, observation boundaries and bounded failure behavior. Freshness is verified only where the adapter can establish it. No universal deterministic replay promise.
@@ -30,7 +30,7 @@ The immediate first slice is an interactive **stream graph**: named devices/sour
 Each item has its own acceptance test. A complete bundle depends on the preceding contracts. Existing basic capture/comparison/CLI features are foundations, not completion of these capabilities.
 
 ## Scope boundaries
-Committed engine direction remains Flink and Kafka Streams; transports remain Kafka and Kinesis, with SQS supported through the private pilot's binding. These are distinct APIs and semantics, not interchangeable connector labels. Complete one public Kafka/Flink workflow first, then expand the support matrix with genuine execution evidence. A process example is a quickstart/test fixture, not streaming-engine validation.
+Committed engine direction remains Flink and Kafka Streams; transports include Kafka, local Kinesis/SQS and MQTT bindings. Public examples now cover Kafka/Flink, Kafka Streams and a synthetic Kinesis/Flink/SQS path. These are distinct APIs and semantics, not interchangeable connector labels. Expand the support matrix with genuine execution evidence. A process example is a quickstart/test fixture, not streaming-engine validation.
 
 In scope: project setup, a graph for navigating architecture and evidence, lifecycle/readiness, fixtures and pacing, explicit state handling, capture/inspection/comparison, regression artifacts, local UI and CLI, adapter contracts, reproducible examples and integration tests.
 
