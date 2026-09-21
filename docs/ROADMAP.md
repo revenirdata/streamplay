@@ -21,6 +21,7 @@ The [interactive stream graph](PIPELINE-GRAPH.md), live-source controls and [sce
 - [x] Trusted application controls for readiness, configuration, state, logs and lifecycle; bundled examples have scoped launch/reset commands. Portable arbitrary-application setup remains incomplete.
 - [x] Send pacing, NDJSON import with original-line errors, and configurable event templates.
 - [ ] Input keys and broader transport metadata controls.
+- [x] Headless MQTT fleet simulation with stable event IDs, multi-target publishing, bounded reconnect/duplicate injection, receipt ledgers, and acknowledgement latency.
 - [x] Cooperative cancellation with partial evidence, live inspection, and browser reconnection. Adapter setup and external I/O still need their own bounds.
 - [ ] Stronger isolation: fresh topic bindings plus verified app reset, with late outputs and concurrent producers tested.
 - [ ] Scenario/run compatibility policy and bounded, paginated history storage.

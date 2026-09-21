@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "name": "Local MQTT fleet comparison",
+  "seed": 20260921,
+  "devices": {
+    "count": 25,
+    "idPrefix": "sim-meter-",
+    "start": 1,
+    "width": 4
+  },
+  "traffic": {
+    "messagesPerDevice": 20,
+    "intervalMs": 250,
+    "jitterMs": 25,
+    "rampUpMs": 1000,
+    "connectConcurrency": 25
+  },
+  "faults": {
+    "duplicateEvery": 100,
+    "reconnectEveryDevice": 10,
+    "reconnectAfterMessage": 10,
+    "reconnectDelayMs": 100
+  },
+  "reading": {
+    "min": 0,
+    "max": 12,
+    "decimals": 2
+  },
+  "topicTemplate": "streamplay/devices/{{deviceId}}/telemetry",
+  "payloadTemplate": {
+    "event_id": "{{eventId}}",
+    "device_id": "{{deviceId}}",
+    "sequence": "{{sequence}}",
+    "emitted_at": "{{timestamp}}",
+    "reading": "{{reading}}"
+  },
+  "targets": [
+    {
+      "id": "candidate-a",
+      "url": "mqtt://127.0.0.1:1883",
+      "qos": 1
+    }
+  ]
+}

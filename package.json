@@ -32,7 +32,8 @@
     "run:suite": "node src/suite-cli.js",
     "example:up": "node scripts/example.js up",
     "example:down": "node scripts/example.js down",
-    "test:integration": "node scripts/integration.js"
+    "test:integration": "node scripts/integration.js",
+    "simulate": "node src/simulate-cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-kinesis": "^3.1136.0",
@@ -41,6 +42,7 @@
     "mqtt": "^5.15.2"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "aedes": "1.2.0"
   }
 }
