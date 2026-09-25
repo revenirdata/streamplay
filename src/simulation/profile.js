@@ -37,6 +37,7 @@ export function validateFleetProfile(value) {
   const jitterMs = integer(traffic.jitterMs ?? 0, 'traffic.jitterMs', 0, Math.max(intervalMs, 1));
   const rampUpMs = integer(traffic.rampUpMs ?? 0, 'traffic.rampUpMs', 0, 3_600_000);
   const connectConcurrency = integer(traffic.connectConcurrency ?? 50, 'traffic.connectConcurrency', 1, 500);
+  const targetPayloadBytes = integer(traffic.targetPayloadBytes ?? 0, 'traffic.targetPayloadBytes', 0, 128_000);
   const duplicateEvery = integer(faults.duplicateEvery ?? 0, 'faults.duplicateEvery', 0, 1_000_000);
   const reconnectEveryDevice = integer(faults.reconnectEveryDevice ?? 0, 'faults.reconnectEveryDevice', 0, 10_000);
   const reconnectAfterMessage = integer(faults.reconnectAfterMessage ?? Math.ceil(messagesPerDevice / 2), 'faults.reconnectAfterMessage', 1, messagesPerDevice);
@@ -77,7 +78,7 @@ export function validateFleetProfile(value) {
       ...Object.fromEntries(['usernameEnv', 'passwordEnv', 'hmacSecretEnv', 'caFile', 'certFile', 'keyFile', 'serverName', 'clientIdTemplate', 'usernameTemplate'].filter(key => target[key] !== undefined).map(key => [key, target[key]])) };
   });
   return structuredClone({ version: 1, name: value.name.trim(), ...(runId === undefined ? {} : { runId }), seed,
-    devices: { count, start, width, idPrefix }, traffic: { messagesPerDevice, intervalMs, jitterMs, rampUpMs, connectConcurrency },
+    devices: { count, start, width, idPrefix }, traffic: { messagesPerDevice, intervalMs, jitterMs, rampUpMs, connectConcurrency, targetPayloadBytes },
     faults: { duplicateEvery, reconnectEveryDevice, reconnectAfterMessage, reconnectDelayMs }, reading: { min, max, decimals },
     counter: { initial: counterInitial, perDeviceOffset: counterPerDeviceOffset, increment: counterIncrement, decimals: counterDecimals },
     topicTemplate: value.topicTemplate, payloadTemplate: value.payloadTemplate, targets });

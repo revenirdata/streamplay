@@ -65,11 +65,20 @@ test('publishes identical event IDs to both targets and measures duplicates and 
   assert.equal(summary.duplicatePublishes, 2);
   assert.equal(summary.expectedPublishesPerTarget, 14);
   assert.deepEqual(summary.targets.map(target => target.acknowledged), [14, 14]);
+  assert.ok(summary.targets.every(target => target.acknowledgedBytes > 0));
   assert.deepEqual(summary.targets.map(target => target.reconnects), [2, 2]);
   const byTarget = id => frames.filter(frame => frame.target === id).map(frame => frame.payload.event_id);
   assert.deepEqual(byTarget('old'), byTarget('new'));
   assert.equal(ledger.length, 28);
   assert.ok(ledger.every(entry => entry.status === 'acknowledged'));
+});
+
+test('pads generated payloads to the requested minimum byte size', async () => {
+  let payload;
+  const sized = { ...profile, devices: { ...profile.devices, count: 1 }, traffic: { ...profile.traffic, messagesPerDevice: 1, targetPayloadBytes: 2048 }, faults: { ...profile.faults, duplicateEvery: 0, reconnectEveryDevice: 0, reconnectAfterMessage: 1 }, targets: [profile.targets[0]] };
+  const summary = await runFleetSimulation(sized, { sleep: async () => {}, async clientFactory() { return { async publish(_topic, value) { payload = value; }, async close() {} }; } });
+  assert.equal(Buffer.byteLength(payload), 2048);
+  assert.equal(summary.targets[0].acknowledgedBytes, 2048);
 });
 
 test('reports publish loss as a failed comparison target', async () => {

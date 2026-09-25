@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "name": "Streaming smoke test",
+  "workload": {
+    "entities": 10,
+    "messagesPerSecondPerEntity": 1,
+    "durationSeconds": 60,
+    "payloadBytes": 1024,
+    "rampUpSeconds": 5,
+    "jitterPercent": 0,
+    "burstMultiplier": 1
+  },
+  "partitioning": {
+    "partitions": 1,
+    "keyCardinality": 10,
+    "hotKeyPercent": 10
+  }
+}

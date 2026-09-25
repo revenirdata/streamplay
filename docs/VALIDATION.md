@@ -16,6 +16,8 @@ StreamPlay is an early prototype, not an MVP or a validated developer product. P
 | Lifecycle | Staged sends, cancellation, partial evidence, adapter/cleanup errors | Forced cancellation of arbitrary plugins |
 | Storage | Immutable artifact publication; write failures preserve evidence in the response | Crash-safe capture journals or multi-process run isolation |
 | Browser | Edit/run/inspect/save/reload/compare, live records, reconnect/cancel, mobile sizing | Independent user acceptance or a full accessibility audit |
+| Experiment planning | Minimal/default plans, bounds, presets, Kinesis record/byte constraints, shard headroom and hot-key warnings | Measured cloud throughput, cost or downstream processor capacity |
+| Unified CLI | Help, invalid commands and delegated experiment planning | A published npm package or shell completion |
 | Application controls | Trusted action dispatch, action/run exclusion, draft configuration preservation, text-only rendering | Sandboxing trusted binding code or canceling arbitrary lifecycle operations |
 
 ## Real application pilot

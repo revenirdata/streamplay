@@ -5,6 +5,31 @@
 <header><a class="brand" href="/" aria-label="StreamPlay home"><span class="mark">≋</span> StreamPlay<span class="by">by Revenir</span></a><div class="header-right"><span class="badge">OPEN SOURCE · IN DEVELOPMENT</span><a href="https://github.com/revenirdata/streamplay">GitHub ↗</a></div></header>
 <main>
 <div class="intro"><div><p class="eyebrow">LOCAL STREAMING WORKBENCH</p><h1>Streaming workbench</h1><p class="sub">Event configuration, scenario execution, and record inspection.</p></div><div class="local"><span></span> Local workspace</div></div>
+<section id="experiment-designer" class="panel experiment-designer" aria-label="Experiment designer">
+<div class="panel-title"><div><p class="eyebrow">DESIGN THE TEST</p><h2><span>Experiment designer</span></h2></div><span class="status">Planning only</span></div>
+<p class="hint experiment-lede">Start with a production-shaped preset, change only what matters, and preserve the full plan as JSON. Estimates describe the workload you intend to test; measured evidence comes from the scenario runner, fleet simulator, recovery labs, and target adapters.</p>
+<div class="experiment-essentials">
+<div><label for="experiment-preset">Preset</label><select id="experiment-preset"><option value="smoke">Smoke test</option><option value="steady">Steady fleet</option><option value="burst">Burst and backlog recovery</option><option value="skew">Hot partition pressure</option><option value="recovery">Failure and recovery</option><option value="eventTime">Late and out-of-order events</option></select></div>
+<div><label for="experiment-name">Experiment name</label><input id="experiment-name" maxlength="120"></div>
+<div><label for="experiment-entities">Entities / devices</label><input id="experiment-entities" type="number" min="1" max="1000000"></div>
+<div><label for="experiment-rate">Messages/sec/entity</label><input id="experiment-rate" type="number" min="0.000001" step="any"></div>
+<div><label for="experiment-duration">Duration (seconds)</label><input id="experiment-duration" type="number" min="1" max="86400"></div>
+<div><label for="experiment-payload">Payload (bytes)</label><input id="experiment-payload" type="number" min="1" max="1048576"></div>
+<div><label for="experiment-burst">Peak multiplier</label><input id="experiment-burst" type="number" min="1" max="1000" step="any"></div>
+<div><label for="experiment-partitions">Partitions / shards</label><input id="experiment-partitions" type="number" min="1" max="100000"></div>
+<div><label for="experiment-hotKey">Traffic on hottest key (%)</label><input id="experiment-hotKey" type="number" min="0" max="100" step="any"></div>
+<div><label for="experiment-utilization">Capacity target (%)</label><input id="experiment-utilization" type="number" min="1" max="100" step="any"></div>
+</div>
+<div class="actions"><button id="experiment-calculate" class="primary">Update plan</button><button id="experiment-export">Export experiment</button><label class="file-button" for="experiment-import">Import experiment</label><input id="experiment-import" class="sr-only" type="file" accept="application/json,.json"></div>
+<p id="experiment-message" role="status" aria-live="polite"></p>
+<div class="experiment-metrics"><div><strong id="experiment-average-rate">—</strong><span>average records</span></div><div><strong id="experiment-peak-rate">—</strong><span>planned peak</span></div><div><strong id="experiment-volume">—</strong><span>payload volume</span></div><div><strong id="experiment-shards">—</strong><span>recommended shards</span></div><div><strong id="experiment-pressure">—</strong><span>configured peak load</span></div></div>
+<p id="experiment-capacity-note" class="experiment-capacity-note"></p>
+<div class="experiment-details">
+<details><summary>Advanced experiment JSON</summary><p class="hint">Optional controls cover jitter and ramp-up, event time, injected faults, state and checkpoint assumptions, and pass/fail thresholds. Omitted values receive safe defaults.</p><textarea id="experiment-json" rows="18" spellcheck="false"></textarea><div class="actions"><button id="experiment-apply-json">Apply advanced plan</button><button id="experiment-export-mqtt">Export MQTT fleet profile</button><button id="experiment-export-evidence">Export capacity evidence</button></div></details>
+<details><summary>Capacity calculation</summary><pre id="experiment-result-json" class="application-records"></pre></details>
+<details><summary>What StreamPlay can test</summary><p class="hint">Ready means StreamPlay can execute or assert it now. Planning means the model is available but real metrics still come from the target. Adapter means the system under test must expose the evidence. Mixed areas contain both.</p><div id="experiment-coverage" class="experiment-coverage"></div></details>
+</div>
+</section>
 <section class="pipeline panel" aria-label="Pipeline graph">
 <div class="pipeline-heading"><div><p class="eyebrow">EXPLORE YOUR PIPELINE</p><h2>Stream graph</h2></div><span id="graph-status" class="graph-status">Configured topology</span></div>
 <div class="graph-toolbar"><label class="sr-only" for="graph-mode">Graph evidence</label><select id="graph-mode"><option value="preview">Scenario topology</option><option value="application" disabled>Live application</option><option value="run" disabled>Selected run</option></select><label class="sr-only" for="graph-search">Search pipeline nodes</label><input id="graph-search" type="search" placeholder="Find a device, topic, or stage…"><div class="graph-zoom-controls"><button id="graph-out" aria-label="Zoom out">−</button><span id="graph-zoom">100%</span><button id="graph-in" aria-label="Zoom in">+</button><button id="graph-fit">Fit</button></div></div>

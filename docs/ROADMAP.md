@@ -22,6 +22,8 @@ The [interactive stream graph](PIPELINE-GRAPH.md), live-source controls and [sce
 - [x] Send pacing, NDJSON import with original-line errors, and configurable event templates.
 - [ ] Input keys and broader transport metadata controls.
 - [x] Headless MQTT fleet simulation with stable event IDs, multi-target publishing, bounded reconnect/duplicate injection, receipt ledgers, and acknowledgement latency.
+- [x] Versioned experiment plans with simple presets, optional workload/time/fault/state/assertion controls, an honest capability map, and Kinesis capacity/hot-key estimates.
+- [x] Unified `streamplay` CLI for the workbench, scenarios, suites, experiment planning, fleet simulation, labs, and bundled examples.
 - [x] Cooperative cancellation with partial evidence, live inspection, and browser reconnection. Adapter setup and external I/O still need their own bounds.
 - [ ] Stronger isolation: fresh topic bindings plus verified app reset, with late outputs and concurrent producers tested.
 - [ ] Scenario/run compatibility policy and bounded, paginated history storage.
