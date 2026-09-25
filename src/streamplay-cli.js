@@ -10,7 +10,8 @@ const commands = Object.freeze({
   run: { file: 'src/cli.js', usage: 'streamplay run <scenario.json>', description: 'Run one saved scenario.' },
   suite: { file: 'src/suite-cli.js', usage: 'streamplay suite <suite.json>', description: 'Run a saved regression suite.' },
   plan: { file: 'src/plan-cli.js', usage: 'streamplay plan <experiment.json>', description: 'Validate an experiment and calculate capacity.' },
-  simulate: { file: 'src/simulate-cli.js', usage: 'streamplay simulate <fleet.json> [--allow-remote]', description: 'Run a bounded MQTT fleet simulation.' }
+  simulate: { file: 'src/simulate-cli.js', usage: 'streamplay simulate <fleet.json> [--allow-remote]', description: 'Run a bounded MQTT fleet simulation.' },
+  aws: { file: 'src/aws-cli.js', usage: 'streamplay aws <doctor|smoke>', description: 'Verify an AWS profile or run an isolated transport smoke test.' }
 });
 
 function help() {
@@ -32,6 +33,7 @@ Examples:
   splay suite examples/suites/orders.process.json
   splay plan examples/experiments/streaming-smoke.json
   splay simulate examples/simulations/mqtt-fleet.local.json
+  splay aws doctor --profile personal --region us-east-1
   splay example kafka-flink up
 
 The JSON files are the source of truth. The browser edits and inspects the same

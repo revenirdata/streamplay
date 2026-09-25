@@ -15,7 +15,7 @@ The repository is public so contributors can participate while the product devel
 The [interactive stream graph](PIPELINE-GRAPH.md), live-source controls and [scenario suites](SCENARIO-SUITES.md) are implemented. Next: the deeper capabilities in [the product vision](VISION.md)—portable application projects, verified execution conditions, evidence differences/timeline, and portable CI regression cases. The graph does not imply automatic discovery or internal event tracing.
 
 - [x] Kafka Streams JVM example with retained state, process restart and explicit isolated reset checks.
-- [ ] Kinesis transport: shard discovery, starting positions, partial write retries, throttling, and isolated real-AWS verification.
+- [ ] Kinesis transport: the isolated AWS profile/identity and bounded create/write/read/cleanup smoke test is implemented; general shard discovery, configurable starting positions, partial write retries, throttling evidence and application processing remain.
 - [x] Public synthetic local Kinesis → actual Flink → SQS pilot with independent input/output bindings, staged timeout/recovery, live raw records and explicit observer ownership.
 - [ ] Flink/Kinesis example with explicit credentials, resource ownership, cleanup, and cost prerequisites.
 - [x] Trusted application controls for readiness, configuration, state, logs and lifecycle; bundled examples have scoped launch/reset commands. Portable arbitrary-application setup remains incomplete.

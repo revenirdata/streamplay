@@ -80,6 +80,10 @@ For the Kafka/Flink example, start the workbench with `npm start`, select **Kafk
 
 The fleet simulator is headless so hundreds or thousands of persistent clients do not become browser objects. A profile can publish the same stable event IDs to multiple isolated MQTT targets, generate a minimum payload size, and retain acknowledgement counts, bytes and latency under `.streamplay/simulations/`. MQTT acknowledgement establishes only what the broker accepted; end-to-end delivery still requires reconciliation at the stream, processor, output and failure-store boundaries. Remote targets require an explicit `--allow-remote` flag, and production-like hostnames are rejected. Credentials are read from named environment variables rather than the profile.
 
+### Isolated AWS account pilot
+
+`splay aws doctor` resolves a named AWS profile and prints the exact account identity without mutating it. `splay aws smoke` requires that account ID back as confirmation, then creates and cleans up one uniquely prefixed Kinesis stream and SQS queue while retaining exact synthetic round-trip evidence. This verifies the AWS transport boundary; it does not claim that Kinesis fed SQS or that Flink processed an event. See the [AWS pilot contract and cost boundary](docs/AWS-PILOT.md).
+
 ## Bring your application
 
 Run your application separately and configure isolated Kafka input/output topics before starting StreamPlay:
