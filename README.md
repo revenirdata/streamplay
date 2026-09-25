@@ -59,10 +59,13 @@ These are pinned, local examples with integration tests—not universal engine o
 | Kafka → Kafka Streams JVM → Kafka | Persistent deduplication, aggregation, retained state, JVM restart and explicit reset | `npm run example:kafka-streams` · [guide](examples/kafka-streams/README.md) |
 | Local Kinesis → Flink JVM → local SQS | Staged input, keyed timeout/recovery timers, live raw output and a dedicated queue observer | `npm run example:kinesis-flink` · [guide](examples/kinesis-flink-sqs/README.md) |
 | MQTT → independent application → MQTT | Subscribe-before-send, QoS 1 acknowledgments, retained-output exclusion | [adapter guide](docs/LOCAL-ADAPTERS.md) · `examples/adapters/mqtt.js` |
+| Software MQTT fleet → 1-4 candidate brokers | Persistent clients, stable event IDs, duplicate/reconnect injection, acknowledgement ledger and latency percentiles | `npm run simulate -- examples/simulations/mqtt-fleet.local.json` · [guide](docs/FLEET-SIMULATION.md) |
 
 Kafka/Flink uses Kafka 3.9.1, Flink 1.20.2 and Kafka SQL connector 3.3.0-1.20. The JVM examples use Kafka Streams 3.9.1 / Flink 1.20.2 and Java 17. Kinesis and SQS are emulated by LocalStack 4.14.0; the Flink processing is real. See [CI and validation boundaries](docs/VALIDATION.md).
 
 For the Kafka/Flink example, start the workbench with `npm start`, select **Kafka → your application → Kafka**, and run the fixture. The Flink UI is at **http://127.0.0.1:18081**. `npm run example:down` removes only that example's containers and volumes, including broker data and Flink state; saved workbench runs remain. To apply SQL edits, stop/reset and start the example again.
+
+The fleet simulator is headless so hundreds or thousands of persistent clients do not become browser objects. A profile can publish the same stable event IDs to multiple isolated MQTT targets and retain a receipt ledger under `.streamplay/simulations/`. MQTT acknowledgement establishes only what the broker accepted; end-to-end delivery still requires reconciliation at the stream, processor, output and failure-store boundaries. Remote targets require an explicit `--allow-remote` flag, and production-like hostnames are rejected. Credentials are read from named environment variables rather than the profile.
 
 ## Bring your application
 
@@ -90,7 +93,7 @@ The bundled Kafka adapter currently supports plaintext local brokers and JSON va
 - Queue observers may consume messages. The public SQS pilot requires sole ownership and documents its capture/acknowledgment behavior. Capture is held in memory until completion; it is not crash-safe archival.
 - Limits are explicit: 1,000 input events, a 512 KB fixture budget, and 10,000 output records or 5 MB. Overflow, capture and cleanup failures remain errors.
 
-Local runs are stored under `.streamplay/`, excluded from Git. No telemetry. [Scenario suites](docs/SCENARIO-SUITES.md) · [pipeline graph](docs/PIPELINE-GRAPH.md) · [Flink recovery](docs/FLINK-RECOVERY.md) · [delivery reconciliation](docs/DELIVERY-RECONCILIATION.md).
+Local runs are stored under `.streamplay/`, excluded from Git. No telemetry. [Scenario suites](docs/SCENARIO-SUITES.md) · [pipeline graph](docs/PIPELINE-GRAPH.md) · [fleet simulation](docs/FLEET-SIMULATION.md) · [Flink recovery](docs/FLINK-RECOVERY.md) · [delivery reconciliation](docs/DELIVERY-RECONCILIATION.md).
 
 ## Development and contributions
 
