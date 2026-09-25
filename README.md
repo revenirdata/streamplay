@@ -11,9 +11,9 @@ Send controlled events through real processing code, inspect the raw inputs and 
 
 Created and maintained by **[Carl Salazar (@kc-salazar)](https://github.com/kc-salazar)** at **[Revenir](https://www.revenirdata.com/streamplay)**. Apache-2.0. Active development; no stable release yet.
 
-![StreamPlay scenario suite showing expected and actual output for two passing Node.js application tests](docs/images/scenario-suite.png)
+![StreamPlay experiment designer with production-shaped workload and Kinesis capacity controls](docs/images/experiment-designer.png)
 
-*Actual execution of the included Node.js example. The same runner powers the browser and CLI. This screenshot is not a Flink result.*
+*The planner separates intended workload and capacity assumptions from measured execution evidence. No traffic is sent until a runner is invoked.*
 
 ## Start locally
 
@@ -28,11 +28,23 @@ npm start
 
 Open **http://127.0.0.1:4317** and click **Run scenario**. The included [Node.js process](examples/process/transform.js) calculates order totals: two duplicate inputs produce two outputs, while a zero-quantity input produces none. It deliberately does not deduplicate. Edit that file, rerun, inspect the output, and add expectations when you know the correct behavior.
 
+The **Experiment designer** starts with a small set of controls and expands into a versioned test plan covering workload, partitions, event time, faults, state, capacity, and assertions. It calculates Kinesis shard/headroom estimates without presenting them as measured results. [Testing model](docs/TESTING-MODEL.md).
+
 Run a complete saved suite without opening the UI:
 
 ```sh
 npm run run:suite -- examples/suites/orders.process.json
 ```
+
+Or use the unified code-first CLI:
+
+```sh
+npm run streamplay -- plan examples/experiments/streaming-smoke.json
+npm run streamplay -- run examples/scenarios/orders.process.json
+npm run streamplay -- suite examples/suites/orders.process.json
+```
+
+See the [CLI reference](docs/CLI.md). The package is not published yet; `npm link` exposes the short cross-platform `splay` command and its `streamplay` alias during development. (`sp` is also installed, but PowerShell reserves that bare name.)
 
 For independent live sources and lifecycle controls, run **`npm run lab`**. Choose an event preset or your own JSON template, add sources, configure values and cadence, and inspect each source's records. [Live-source setup](docs/LIVE-SOURCES.md).
 
@@ -42,6 +54,7 @@ For independent live sources and lifecycle controls, run **`npm run lab`**. Choo
 
 - **Inspect the pipeline.** A dark graph shows named topics/streams, sources, processors and outputs. Click a node for captured JSON and metadata; pause inspection while capture continues. Graph edges describe architecture, not inferred per-event causality.
 - **Prepare controlled inputs.** Paste JSON, import NDJSON with original-line errors, or generate timed phases. Model application events, sensor readings or meters with configurable fields and seeded profiles. Up to 20 independent live sources by default.
+- **Design production-shaped experiments.** Vary entity count, rate, duration, payload size, ramp, jitter, bursts, partition count and skew. Preserve optional event-time, fault, state and assertion controls in one JSON plan; unsupported execution requirements are labeled explicitly.
 - **Run real code.** Use the process quickstart, the Kafka boundary adapter, or a trusted local application binding. Source and sink transports can differ.
 - **Assert behavior.** Run one scenario or a suite. See expected versus actual output, duplicate counts, each test's records and logs, and explicit PASS/FAIL/ERROR/NOT RUN states. No expectations means OBSERVED, not PASS.
 - **Retain evidence.** Save runs, compare outputs, export scenarios and suite reports, and keep partial results on cancellation. View metadata without hiding the original payload.
@@ -65,7 +78,7 @@ Kafka/Flink uses Kafka 3.9.1, Flink 1.20.2 and Kafka SQL connector 3.3.0-1.20. T
 
 For the Kafka/Flink example, start the workbench with `npm start`, select **Kafka → your application → Kafka**, and run the fixture. The Flink UI is at **http://127.0.0.1:18081**. `npm run example:down` removes only that example's containers and volumes, including broker data and Flink state; saved workbench runs remain. To apply SQL edits, stop/reset and start the example again.
 
-The fleet simulator is headless so hundreds or thousands of persistent clients do not become browser objects. A profile can publish the same stable event IDs to multiple isolated MQTT targets and retain a receipt ledger under `.streamplay/simulations/`. MQTT acknowledgement establishes only what the broker accepted; end-to-end delivery still requires reconciliation at the stream, processor, output and failure-store boundaries. Remote targets require an explicit `--allow-remote` flag, and production-like hostnames are rejected. Credentials are read from named environment variables rather than the profile.
+The fleet simulator is headless so hundreds or thousands of persistent clients do not become browser objects. A profile can publish the same stable event IDs to multiple isolated MQTT targets, generate a minimum payload size, and retain acknowledgement counts, bytes and latency under `.streamplay/simulations/`. MQTT acknowledgement establishes only what the broker accepted; end-to-end delivery still requires reconciliation at the stream, processor, output and failure-store boundaries. Remote targets require an explicit `--allow-remote` flag, and production-like hostnames are rejected. Credentials are read from named environment variables rather than the profile.
 
 ## Bring your application
 
@@ -93,7 +106,7 @@ The bundled Kafka adapter currently supports plaintext local brokers and JSON va
 - Queue observers may consume messages. The public SQS pilot requires sole ownership and documents its capture/acknowledgment behavior. Capture is held in memory until completion; it is not crash-safe archival.
 - Limits are explicit: 1,000 input events, a 512 KB fixture budget, and 10,000 output records or 5 MB. Overflow, capture and cleanup failures remain errors.
 
-Local runs are stored under `.streamplay/`, excluded from Git. No telemetry. [Scenario suites](docs/SCENARIO-SUITES.md) · [pipeline graph](docs/PIPELINE-GRAPH.md) · [fleet simulation](docs/FLEET-SIMULATION.md) · [Flink recovery](docs/FLINK-RECOVERY.md) · [delivery reconciliation](docs/DELIVERY-RECONCILIATION.md).
+Local runs are stored under `.streamplay/`, excluded from Git. No telemetry. [Testing model](docs/TESTING-MODEL.md) · [CLI](docs/CLI.md) · [scenario suites](docs/SCENARIO-SUITES.md) · [pipeline graph](docs/PIPELINE-GRAPH.md) · [fleet simulation](docs/FLEET-SIMULATION.md) · [Flink recovery](docs/FLINK-RECOVERY.md) · [delivery reconciliation](docs/DELIVERY-RECONCILIATION.md).
 
 ## Development and contributions
 

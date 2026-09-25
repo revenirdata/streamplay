@@ -12,13 +12,13 @@ function percentile(values, p) {
 
 function metric(id) {
   return { id, connectionsAttempted: 0, connected: 0, connectionFailures: 0, reconnects: 0,
-    publishesAttempted: 0, acknowledged: 0, publishFailures: 0, latencyMs: [], errors: [] };
+    publishesAttempted: 0, acknowledged: 0, acknowledgedBytes: 0, publishFailures: 0, latencyMs: [], errors: [] };
 }
 
 function exposeMetric(value) {
   return { id: value.id, connectionsAttempted: value.connectionsAttempted, connected: value.connected,
     connectionFailures: value.connectionFailures, reconnects: value.reconnects, publishesAttempted: value.publishesAttempted,
-    acknowledged: value.acknowledged, publishFailures: value.publishFailures,
+    acknowledged: value.acknowledged, acknowledgedBytes: value.acknowledgedBytes, publishFailures: value.publishFailures,
     latencyMs: { p50: percentile(value.latencyMs, .5), p90: percentile(value.latencyMs, .9), p99: percentile(value.latencyMs, .99), max: value.latencyMs.length ? Number(Math.max(...value.latencyMs).toFixed(2)) : null },
     errors: value.errors };
 }
@@ -52,6 +52,16 @@ async function mapLimit(items, limit, operation) {
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+function payloadWithMinimumBytes(value, targetBytes) {
+  let payload = JSON.stringify(value);
+  if (!targetBytes || Buffer.byteLength(payload) >= targetBytes) return payload;
+  const padded = { ...value, _streamplay_padding: '' };
+  const overhead = Buffer.byteLength(JSON.stringify(padded));
+  if (overhead < targetBytes) padded._streamplay_padding = 'x'.repeat(targetBytes - overhead);
+  payload = JSON.stringify(padded);
+  return payload;
 }
 
 export async function runFleetSimulation(input, { clientFactory, ledger = async () => {}, env = process.env, signal, now = () => Date.now(), sleep = delay, onProgress = () => {} } = {}) {
@@ -92,7 +102,7 @@ export async function runFleetSimulation(input, { clientFactory, ledger = async 
     const began = now();
     try {
       await device.clients.get(target.id).publish(topic, payload, { qos: target.qos });
-      const latencyMs = now() - began; metrics.acknowledged++; metrics.latencyMs.push(latencyMs);
+      const latencyMs = now() - began; metrics.acknowledged++; metrics.acknowledgedBytes += Buffer.byteLength(payload); metrics.latencyMs.push(latencyMs);
       await ledger({ runId, target: target.id, deviceId: device.id, eventId, duplicate, status: 'acknowledged', latencyMs, observedAt: new Date(now()).toISOString() });
     } catch (error) {
       metrics.publishFailures++; if (metrics.errors.length < 20) metrics.errors.push({ phase: 'publish', deviceId: device.id, eventId, message: error.message });
@@ -119,7 +129,7 @@ export async function runFleetSimulation(input, { clientFactory, ledger = async 
           counter: (profile.counter.initial + device.index * profile.counter.perDeviceOffset + sequence * profile.counter.increment).toFixed(profile.counter.decimals),
           uptime: String(sequence * Math.max(1, Math.round(profile.traffic.intervalMs / 1000))) };
         const topic = renderTemplate(profile.topicTemplate, variables);
-        const payload = JSON.stringify(renderTemplate(profile.payloadTemplate, variables));
+        const payload = payloadWithMinimumBytes(renderTemplate(profile.payloadTemplate, variables), profile.traffic.targetPayloadBytes);
         const logicalOrdinal = device.index * profile.traffic.messagesPerDevice + sequence;
         logicalEvents++;
         await Promise.all(profile.targets.map(target => publish(device, target, topic, payload, eventId, false)));

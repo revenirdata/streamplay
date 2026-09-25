@@ -14,6 +14,7 @@ import { loadLab } from './lab/runtime.js';
 const publicDir = new URL('../public/', import.meta.url);
 const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/graph.js': ['graph.js', 'text/javascript'], '/topology.js': ['../src/topology.js', 'text/javascript'] };
 assets['/experiment.js'] = ['../src/experiment.js', 'text/javascript'];
+assets['/experiment-plan.js'] = ['../src/experiment-plan.js', 'text/javascript'];
 assets['/scenario.js'] = ['../src/scenario.js', 'text/javascript'];
 assets['/source-profile.js'] = ['../src/source-profile.js', 'text/javascript'];
 assets['/lab.js'] = ['lab.js', 'text/javascript'];
@@ -22,6 +23,7 @@ assets['/reconciliation.js'] = ['reconciliation.js', 'text/javascript'];
 assets['/delivery-model.js'] = ['../src/reconciliation.js', 'text/javascript'];
 assets['/test-results.js'] = ['test-results.js', 'text/javascript'];
 assets['/suite-panel.js'] = ['suite-panel.js', 'text/javascript'];
+assets['/experiment-designer.js'] = ['experiment-designer.js', 'text/javascript'];
 const sample = JSON.parse(await readFile(new URL('../examples/scenarios/orders.process.json', import.meta.url), 'utf8'));
 
 export function workbench(config = configuration(), adapters = {}) {

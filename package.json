@@ -2,7 +2,12 @@
   "name": "@revenirdata/streamplay",
   "version": "0.0.1-dev",
   "private": true,
-  "description": "A local workbench for streaming development.",
+  "description": "A local test environment for streaming systems.",
+  "bin": {
+    "streamplay": "src/streamplay-cli.js",
+    "sp": "src/streamplay-cli.js",
+    "splay": "src/streamplay-cli.js"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -33,7 +38,9 @@
     "example:up": "node scripts/example.js up",
     "example:down": "node scripts/example.js down",
     "test:integration": "node scripts/integration.js",
-    "simulate": "node src/simulate-cli.js"
+    "simulate": "node src/simulate-cli.js",
+    "plan": "node src/plan-cli.js",
+    "streamplay": "node src/streamplay-cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-kinesis": "^3.1136.0",

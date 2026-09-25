@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
 import { test, expect } from '@playwright/test';
 
+test('designs a production-shaped experiment without claiming it ran', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#experiment-average-rate')).toHaveText('10/s');
+  await page.locator('#experiment-preset').selectOption('burst');
+  await expect(page.locator('#experiment-peak-rate')).toHaveText('2.5k/s');
+  await expect(page.locator('#experiment-shards')).toHaveText('7');
+  await page.locator('#experiment-entities').fill('1000');
+  await page.locator('#experiment-rate').fill('2');
+  await page.locator('#experiment-payload').fill('1000');
+  await page.locator('#experiment-burst').fill('2');
+  await page.locator('#experiment-partitions').fill('8');
+  await page.locator('#experiment-hotKey').fill('60');
+  await page.locator('#experiment-calculate').click();
+  await expect(page.locator('#experiment-capacity-note')).toContainText('hottest partition key');
+  await expect(page.locator('#experiment-message')).toHaveText('Plan updated. No traffic was sent.');
+  await page.getByText('What StreamPlay can test', { exact: true }).click();
+  await expect(page.locator('#experiment-coverage')).toContainText('Event time');
+});
+
 test('edit, execute, inspect raw data, save, reload and compare actual runs', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
